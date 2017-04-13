@@ -1,0 +1,58 @@
+diff --git a/uberfire-extensions/uberfire-wires/uberfire-wires-core/uberfire-wires-core-client/src/main/java/org/uberfire/ext/wires/core/client/layers/LayersScreen.java b/uberfire-extensions/uberfire-wires/uberfire-wires-core/uberfire-wires-core-client/src/main/java/org/uberfire/ext/wires/core/client/layers/LayersScreen.java
+index 723bb0817..0cbe11c7d 100644
+--- a/uberfire-extensions/uberfire-wires/uberfire-wires-core/uberfire-wires-core-client/src/main/java/org/uberfire/ext/wires/core/client/layers/LayersScreen.java
++++ b/uberfire-extensions/uberfire-wires/uberfire-wires-core/uberfire-wires-core-client/src/main/java/org/uberfire/ext/wires/core/client/layers/LayersScreen.java
+@@ -28,12 +28,14 @@ import com.google.gwt.user.client.ui.Composite;
+ import com.google.gwt.user.client.ui.IsWidget;
+ import com.google.gwt.user.client.ui.SimplePanel;
+ import com.google.gwt.user.client.ui.Widget;
++import org.gwtbootstrap3.client.ui.Button;
+ import org.gwtbootstrap3.client.ui.PanelCollapse;
+ import org.gwtbootstrap3.client.ui.PanelGroup;
+ import org.gwtbootstrap3.client.ui.PanelHeader;
+ import org.uberfire.client.annotations.WorkbenchPartTitle;
+ import org.uberfire.client.annotations.WorkbenchPartView;
+ import org.uberfire.client.annotations.WorkbenchScreen;
++import org.uberfire.client.mvp.PlaceManager;
+ import org.uberfire.ext.wires.core.api.events.ClearEvent;
+ import org.uberfire.ext.wires.core.api.events.ShapeAddedEvent;
+ import org.uberfire.ext.wires.core.api.events.ShapeDeletedEvent;
+@@ -55,12 +57,18 @@ public class LayersScreen extends Composite {
+     PanelHeader headerLayers;
+ 
+     @UiField
++    Button clickMe;
++
++    @UiField
+     PanelCollapse collapseLayers;
+     @Inject
+     private LayersGroup layersGroup;
+     @Inject
+     private ShapeFactoryCache factoriesCache;
+ 
++    @Inject
++    PlaceManager p;
++
+     @PostConstruct
+     public void init() {
+         initWidget(uiBinder.createAndBindUi(this));
+@@ -70,6 +78,7 @@ public class LayersScreen extends Composite {
+         headerLayers.setDataTargetWidget(collapseLayers);
+ 
+         layers.add(layersGroup);
++        clickMe.addClickHandler(c -> p.goTo("PagedTableScreen"));
+     }
+ 
+     @WorkbenchPartTitle
+diff --git a/uberfire-extensions/uberfire-wires/uberfire-wires-core/uberfire-wires-core-client/src/main/java/org/uberfire/ext/wires/core/client/layers/LayersScreen.ui.xml b/uberfire-extensions/uberfire-wires/uberfire-wires-core/uberfire-wires-core-client/src/main/java/org/uberfire/ext/wires/core/client/layers/LayersScreen.ui.xml
+index 32af5e568..50ec7a4b8 100644
+--- a/uberfire-extensions/uberfire-wires/uberfire-wires-core/uberfire-wires-core-client/src/main/java/org/uberfire/ext/wires/core/client/layers/LayersScreen.ui.xml
++++ b/uberfire-extensions/uberfire-wires/uberfire-wires-core/uberfire-wires-core-client/src/main/java/org/uberfire/ext/wires/core/client/layers/LayersScreen.ui.xml
+@@ -28,6 +28,7 @@
+   <g:SimplePanel styleName="{style.layers}">
+     <b:PanelGroup ui:field="accordion">
+       <b:Panel>
++        <b:Button ui:field="clickMe">ClickMe</b:Button>
+         <b:PanelHeader dataToggle="COLLAPSE" text="Layers" ui:field="headerLayers"/>
+         <b:PanelCollapse ui:field="collapseLayers" in="true">
+           <b:PanelBody>

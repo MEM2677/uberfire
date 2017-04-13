@@ -30,6 +30,7 @@ import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.user.client.ui.HasWidgets;
 import com.google.gwt.user.client.ui.IsWidget;
@@ -267,10 +268,16 @@ public class PlaceManagerImpl
                                     (PopupActivity) activity);
                 doWhenFinished.execute();
             } else if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
+                // we are about to switch to a perspective
                 launchPerspectiveActivity(place,
                                           (PerspectiveActivity) activity,
                                           doWhenFinished);
+                // in this point perspective is loaded and all default screen are open
             }
+
+            // matteo
+            placeHistoryHandler.register(activity,
+                                         place);
         } else {
             goTo(resolved.getPlaceRequest(),
                  panel,
@@ -713,7 +720,13 @@ public class PlaceManagerImpl
 
         visibleWorkbenchParts.put(place,
                                   part);
+
         getPlaceHistoryHandler().onPlaceChange(place);
+
+        // added by matteo
+//        GWT.log(">> " + activity.getResourceType().getName()); // Matteo
+        getPlaceHistoryHandler().register(activity,
+                                          place);
 
         final IsWidget titleDecoration = maybeWrapExternalWidget(activity,
                                                                  () -> activity.getTitleDecorationElement(),
@@ -767,6 +780,9 @@ public class PlaceManagerImpl
         }
 
         getPlaceHistoryHandler().onPlaceChange(place);
+        // modified by Matteo
+        getPlaceHistoryHandler().register(activity,
+                                          place);
 
         activePopups.put(place.getIdentifier(),
                          activity);
@@ -784,6 +800,8 @@ public class PlaceManagerImpl
     private void launchPerspectiveActivity(final PlaceRequest place,
                                            final PerspectiveActivity activity,
                                            final Command doWhenFinished) {
+
+        placeHistoryHandler.flush();
 
         checkNotNull("doWhenFinished",
                      doWhenFinished);
@@ -879,9 +897,13 @@ public class PlaceManagerImpl
      * Opens all the parts of the given panel and its subpanels. This is a subroutine of the perspective switching
      * process.
      */
-    private void openPartsRecursively(PanelDefinition panel) {
+    private void openPartsRecursively(PanelDefinition panel) { // Matteo
+        // Matteo Investigate how this works
+        // Load the definition and perform a goto for each def - only for the NWSE perspective
         for (PartDefinition part : ensureIterable(panel.getParts())) {
             final PlaceRequest place = part.getPlace().clone();
+
+            placeHistoryHandler.register(place);
             part.setPlace(place);
             goTo(part,
                  panel);
@@ -934,6 +956,10 @@ public class PlaceManagerImpl
                 return;
             }
         }
+
+        // modified by Matteo
+        getPlaceHistoryHandler().registerClose(activity,
+                                               place);
 
         workbenchPartCloseEvent.fire(new ClosePlaceEvent(place));
 

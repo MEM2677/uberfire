@@ -69,8 +69,12 @@ public class LayersScreen extends Composite {
     @Inject
     PlaceManager p;
 
+    boolean toggle;
+
     @PostConstruct
     public void init() {
+        toggle = true;
+
         initWidget(uiBinder.createAndBindUi(this));
 
         accordion.setId(DOM.createUniqueId());
@@ -78,7 +82,16 @@ public class LayersScreen extends Composite {
         headerLayers.setDataTargetWidget(collapseLayers);
 
         layers.add(layersGroup);
-        clickMe.addClickHandler(c -> p.goTo("PagedTableScreen"));
+        clickMe.addClickHandler(c -> {
+            if (toggle) {
+                p.goTo("PagedTableScreen");
+            }
+            else
+            {
+                p.closePlace("PagedTableScreen");
+            }
+            toggle ^= true;
+        });
     }
 
     @WorkbenchPartTitle

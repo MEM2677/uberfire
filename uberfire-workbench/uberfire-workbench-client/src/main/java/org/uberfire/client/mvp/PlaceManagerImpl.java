@@ -269,10 +269,12 @@ public class PlaceManagerImpl
                 doWhenFinished.execute();
             } else if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
                 // we are about to switch to a perspective
+                GWT.log("=========== START ===========");
                 launchPerspectiveActivity(place,
                                           (PerspectiveActivity) activity,
                                           doWhenFinished);
-                // in this point perspective is loaded and all default screen are open
+                GWT.log("=========== END ===========");
+                // matteo in this point perspective is loaded and all default screen are open
             }
 
             // matteo

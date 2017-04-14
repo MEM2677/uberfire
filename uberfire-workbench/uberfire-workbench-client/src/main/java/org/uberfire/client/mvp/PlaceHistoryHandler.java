@@ -15,11 +15,8 @@
  */
 package org.uberfire.client.mvp;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.StringJoiner;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import javax.enterprise.context.Dependent;
 import javax.inject.Inject;
 
@@ -31,7 +28,6 @@ import com.google.web.bindery.event.shared.EventBus;
 import com.google.web.bindery.event.shared.HandlerRegistration;
 import org.uberfire.mvp.PlaceRequest;
 import org.uberfire.mvp.impl.DefaultPlaceRequest;
-import org.uberfire.security.Resource;
 import org.uberfire.workbench.model.ActivityResourceType;
 
 @Dependent
@@ -43,8 +39,7 @@ public class PlaceHistoryHandler {
     private PlaceRequestHistoryMapper mapper;
     private PlaceManager placeManager;
     private PlaceRequest defaultPlaceRequest = PlaceRequest.NOWHERE;
-    private Map<Activity, PlaceRequest> objects = new HashMap<>();
-    private Map<PlaceRequest, Boolean> perspective = new HashMap<>();
+    private String URL;
 
     /**
      * Create a new PlaceHistoryHandler.
@@ -147,102 +142,149 @@ public class PlaceHistoryHandler {
         if (defaultPlaceRequest.equals(newPlaceRequest)) {
             return "";
         }
-        String perspective = objects.entrySet().stream()
-                .filter(map -> map.getKey().isType(ActivityResourceType.PERSPECTIVE.name()))
-                .map(map -> map.getValue().getIdentifier())
-                .collect(Collectors.joining());
-        String screens = objects.entrySet().stream()
-                .filter(map -> map.getKey().isType(ActivityResourceType.SCREEN.name()))
-                .map(map -> map.getValue().getIdentifier())
-                .collect(Collectors.joining(","));
-        String closed = this.perspective.entrySet()
-                .stream().filter(map -> !map.getValue())
-                .map(map -> "~".concat(map.getKey().getIdentifier()))
-                .collect(Collectors.joining(","));
-        String editors = objects.entrySet().stream()
-                .filter(map -> map.getKey().isType(ActivityResourceType.EDITOR.name()))
-                .map(map -> map.getValue().getPath().toURI())
-                .collect(Collectors.joining(","));
-        // we won't modify URL unless we have the perspective name
-        if (isNotBlank(perspective)) {
-            sj.add(perspective);
-            // append screen and paths if either of them is not null
-            if (isNotBlank(editors) || isNotBlank(screens)) {
-                // the placeholder for the 'screen' list appear if editor is not null
-                if (isNotBlank(screens) || isNotBlank(editors)) {
-                    sj.add("#" + screens);
-                    if (isNotBlank(closed))
-                    {
-                        sj.add(",");
-                    }
-                    sj.add(closed);
-                    // finally
-                    if (isNotBlank(editors)) {
-                        sj.add("#" + editors);
-                    }
-                }
-            }
-        }
-        GWT.log("URL -> " + sj.toString());
-        return sj.toString();
+
+//        GWT.log("URL -> " + URL);
+        return URL;
     }
 
+    /**
+     * Returns true if anf
+     * @return
+     */
+    private boolean isPerspectiveInUrl() {
+        return (isNotBlank(URL) && URL.indexOf("|") > 0);
+    }
+
+    private void removeScreenFromUrl(String screen)
+    {
+
+    }
+
+    private void addScreenToUrl(String screen)
+    {
+        String negatedScreen = "~".concat(screen);
+
+        if (URL.indexOf(negatedScreen) != -1)
+        {
+            URL = URL.replace(negatedScreen, screen);
+        }
+        else if (URL.indexOf(screen) > 0)
+        {
+            // do nothing the screen is already present
+        }
+        else if (!isPerspectiveInUrl())
+        {
+            // must add the screen in the group of the current perspective (which is not yet loaded)
+            if (isNotBlank(URL))
+            {
+                URL = URL.concat(",").concat(screen);
+            }
+            else
+            {
+                URL = screen;
+            }
+        }
+        else
+        {
+            // this is a screen outside the current perspective
+            if (URL.indexOf("$") == -1) {
+                // add the '$' if needed
+                URL = URL.concat("$").concat(screen);
+            }
+            // otherwise append the screen after the last element
+            else {
+                URL = URL.concat(",").concat(screen);
+            }
+        }
+    }
+
+    /**
+     * The behaviour is simple: when opening the perspective the perspective itself
+     * is the last element to be called with a goTo(), being the screens first.
+     * We assume that every screen opened with a goTo() before the perspective is called
+     * belongs to the same perspective
+     * @param activity
+     * @param place
+     */
     public void register(Activity activity,
                          PlaceRequest place) {
+        String screen = place.getFullIdentifier();
+
         GWT.log(" ~~ adding token ~~ " + activity.getResourceType().getName() + ":" + place.getIdentifier());
-        for (Resource res : activity.getDependencies()) {
-            GWT.log("    ### depends ~~ " + res.getResourceType().getName());
-        }
         if (place.getPath() != null) {
             GWT.log("    >>> path: " + place.getPath());
         }
-        objects.put(activity,
-                    place);
+        if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
+            URL = screen.concat("|").concat(URL);
+        } else if (activity.isType(ActivityResourceType.SCREEN.name())) {
+//            // if the screen is NOT in the existing URL...
+//            if (isPerspectiveInUrl() && URL.indexOf(id) == -1) {
+//                // ... if the URL does NOT end with a '$' add it
+//                if (URL.indexOf("$") == -1) {
+//                    URL = URL.concat("$").concat(id);
+//                }
+//                // otherwise append the screen after the last element
+//                else {
+//                    URL = URL.concat(",").concat(id);
+//                }
+//            } else if (!isPerspectiveInUrl()){
+//                // add the screen to the perspective group if it isn't there already
+//                if (URL.indexOf(id) == -1)
+//                {
+//                    if (isNotBlank(URL)) {
+//                        URL = URL.concat(",");
+//                    }
+//                    URL = URL.concat(place.getIdentifier());
+//                }
+//            }
+            addScreenToUrl(screen);
+        }
         onPlaceChange(place);
     }
 
     // This gets called only when opening recursively all the screens of a perspective
     public void register(PlaceRequest place) {
-        perspective.put(place,
-                        true);
+//        if (isNotBlank(URL)) {
+//            URL = URL.concat(",");
+//        }
+//        URL = URL.concat(place.getIdentifier());
     }
 
     public void registerClose(Activity activity,
                               PlaceRequest place) {
+        String id = place.getFullIdentifier();
+
         GWT.log(" ~~ removing token ~~ " + activity.getResourceType().getName() + ":" + place.getIdentifier());
         if (place.getPath() != null) {
             GWT.log("    >>> path: " + place.getPath());
         }
-//        objects.forEach((key, value) -> {
-//            GWT.log("   (have key " + key.getResourceType().getName() + ":" + value.getIdentifier() + ")");
-//        });
-        // remove matching screen (screens don't have a path)
-        objects.entrySet().removeIf(
-                entry -> {
-                    boolean nameMatch = entry.getValue().getIdentifier().equals(place.getIdentifier());
-
-                    if (nameMatch
-                            && perspective.containsKey(entry.getValue())) {
-                        GWT.log("~~ removing perspective screen ~~");
-                        perspective.put(entry.getValue(),
-                                        false);
-                    }
-                    // want to get rid of the activity with matching path
-//                    if (isPlacePath) {
-//                        return (entry.getValue().getIdentifier().equals(place.getIdentifier())
-//                                && null != entry.getValue().getPath()
-//                                && entry.getValue().getPath().equals(place.getPath()));
-//                    }
-                    return (nameMatch);
-                }
-        );
+        if (activity.isType(ActivityResourceType.SCREEN.name())) {
+            // SILLY string analysis
+            if ((URL.indexOf('$') > 0 && URL.indexOf(id) < URL.indexOf('$'))
+                    || URL.indexOf('$') == -1) {
+                URL = URL.replace(id,
+                                  "~".concat(id));
+            } else {
+                // simply delete from the URL
+                URL = URL.replace(id,
+                                  "");
+            }
+            URL = URL.replace(",,",
+                              ",");
+            if (URL.endsWith("$")) {
+                URL = URL.substring(0,
+                                    URL.indexOf('$'));
+            }
+        } else {
+            // suppress CQ warnings
+        }
+        // update URL
         onPlaceChange(place);
     }
 
     public void flush() {
 //        GWT.log(" ~~ flushing history line ~~");
-        objects.clear();
-        perspective.clear();
+        URL = "";
     }
 
     /**

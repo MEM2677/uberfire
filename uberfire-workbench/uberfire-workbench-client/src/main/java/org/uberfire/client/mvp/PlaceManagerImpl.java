@@ -238,6 +238,8 @@ public class PlaceManagerImpl
         }
         final ResolvedRequest resolved = resolveActivity(place);
 
+        GWT.log("START: " + placeHistoryHandler.getToken());
+
         if (resolved.getActivity() != null) {
             final Activity activity = resolved.getActivity();
             if (activity.isType(ActivityResourceType.SCREEN.name()) || activity.isType(ActivityResourceType.EDITOR.name())) {
@@ -268,7 +270,7 @@ public class PlaceManagerImpl
                                     (PopupActivity) activity);
                 doWhenFinished.execute();
             } else if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
-                // we are about to switch to a perspective
+                // Matteo we are about to switch to a perspective
                 GWT.log("=========== START ===========");
                 launchPerspectiveActivity(place,
                                           (PerspectiveActivity) activity,
@@ -280,7 +282,6 @@ public class PlaceManagerImpl
             // matteo
             placeHistoryHandler.register(activity,
                                          place);
-            GWT.log("???? " + placeHistoryHandler.getToken());
         } else {
             goTo(resolved.getPlaceRequest(),
                  panel,
@@ -347,6 +348,16 @@ public class PlaceManagerImpl
         }
 
         final Set<Activity> activities = activityManager.getActivities(resolvedPlaceRequest);
+
+        if (place.getIdentifier().equals(request.getIdentifier()))
+        {
+            GWT.log("PERSPECTIVE IS THE SAME");
+        }
+        else
+        {
+            GWT.log("PERSPECTIVE IS THE DIFFERENT");
+        }
+
 
         if (activities == null || activities.size() == 0) {
             final PlaceRequest notFoundPopup = new DefaultPlaceRequest("workbench.activity.notfound");
@@ -758,6 +769,7 @@ public class PlaceManagerImpl
         addSplashScreenFor(place);
 
         try {
+            GWT.log("---1---");
             activity.onOpen();
         } catch (Exception ex) {
             lifecycleErrorHandler.handle(activity,
@@ -795,6 +807,7 @@ public class PlaceManagerImpl
                          activity);
 
         try {
+            GWT.log("---2---");
             activity.onOpen();
         } catch (Exception ex) {
             activePopups.remove(place.getIdentifier());
@@ -804,11 +817,21 @@ public class PlaceManagerImpl
         }
     }
 
-    private void launchPerspectiveActivity(final PlaceRequest place,
+    /**
+     * Before launching the perspective we check that it isn't already open by asking the
+     * placeHistory service to extract the perspective encoded in the URL
+     * @param request
+     * @param activity
+     * @param doWhenFinished
+     */
+    private void launchPerspectiveActivity(final PlaceRequest request,
                                            final PerspectiveActivity activity,
                                            final Command doWhenFinished) {
 
         placeHistoryHandler.flush();
+
+        // process the URL to extract the perspective definition
+        final PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(request);
 
         checkNotNull("doWhenFinished",
                      doWhenFinished);
@@ -826,7 +849,17 @@ public class PlaceManagerImpl
                                 });
         } else {
             final PerspectiveActivity oldPerspectiveActivity = perspectiveManager.getCurrentPerspective();
+
+//            GWT.log("NEW    : " + place.getIdentifier());
+//            if (null != oldPerspectiveActivity) {
+//                GWT.log("OLD    : " + oldPerspectiveActivity.getPlace().getIdentifier());
+//            }
+//            if (null != placeHistoryHandler.getToken()) {
+//                GWT.log("CACHED : " + placeHistoryHandler.getToken());
+//            }
+
             if (oldPerspectiveActivity != null && place.equals(oldPerspectiveActivity.getPlace())) {
+//                GWT.log("§§§§ SAME PERSPECTIVE §§§§");
                 return;
             }
 
@@ -835,6 +868,7 @@ public class PlaceManagerImpl
                 public void execute() {
                     // first try to open the new perspective, so we can avoid leaving the user on a blank screen if the onOpen() method fails
                     try {
+                        GWT.log("---3---");
                         activity.onOpen();
                     } catch (Exception ex) {
                         lifecycleErrorHandler.handle(activity,

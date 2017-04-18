@@ -15,6 +15,7 @@
  */
 package org.uberfire.client.mvp;
 
+import com.google.gwt.core.client.GWT;
 import org.uberfire.mvp.PlaceRequest;
 
 import static org.uberfire.commons.validation.PortablePreconditions.checkNotNull;
@@ -53,9 +54,11 @@ public abstract class AbstractActivity implements Activity {
     @Override
     public void onOpen() {
         if (this.place == null) {
+            GWT.log("NOT STARTED");
             throw new IllegalStateException("Activity " + this + " has not been started");
         }
         if (open) {
+            GWT.log("ALREADY OPEN");
             throw new IllegalStateException("Activity " + this + " already open");
         }
         open = true;

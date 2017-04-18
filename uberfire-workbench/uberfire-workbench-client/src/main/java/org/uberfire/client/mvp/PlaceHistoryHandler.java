@@ -222,10 +222,10 @@ public class PlaceHistoryHandler {
                          PlaceRequest place) {
         String screen = place.getFullIdentifier();
 
-        GWT.log(" ~~ adding token ~~ " + activity.getResourceType().getName() + ":" + place.getIdentifier());
-        if (place.getPath() != null) {
-            GWT.log("    >>> path: " + place.getPath());
-        }
+//        GWT.log(" ~~ adding token ~~ " + activity.getResourceType().getName() + ":" + place.getIdentifier());
+//        if (place.getPath() != null) {
+//            GWT.log("    >>> path: " + place.getPath());
+//        }
         if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
             historyUrl = screen.concat("|").concat(historyUrl);
         } else if (activity.isType(ActivityResourceType.SCREEN.name())) {
@@ -240,13 +240,20 @@ public class PlaceHistoryHandler {
         // FIXME delete this!, not used
     }
 
+    /**
+     * Get the
+     * @param place
+     * @return
+     */
     public PlaceRequest getPerspectiveFromUrl(PlaceRequest place)
     {
         addressBarUrl = place.getIdentifier();
         if (isPerspectiveInUrl(addressBarUrl)) {
             String perspectiveName = addressBarUrl.substring(0,
                                                              addressBarUrl.indexOf("|"));
-            GWT.log(">>> perspective in the ADDRESS BAR: " + perspectiveName);
+//            GWT.log(">>> perspective in the ADDRESS BAR: " + perspectiveName);
+
+            // FIXME CREATE A SMALL FACTORY - THE OBJECT MUST BE OF THE SAME TYPE
             place = new DefaultPlaceRequest(perspectiveName);
         }
         return place;

@@ -89,6 +89,7 @@ public class LayersScreen extends Composite {
             else
             {
                 p.closePlace("PagedTableScreen");
+                p.goTo("WiresScratchPadScreen");
             }
             toggle ^= true;
         });

@@ -39,7 +39,9 @@ public class PlaceHistoryHandler {
     private PlaceRequestHistoryMapper mapper;
     private PlaceManager placeManager;
     private PlaceRequest defaultPlaceRequest = PlaceRequest.NOWHERE;
-    private String URL;
+    /* This is the 'state' string as shown in the */
+    private String historyUrl;
+    private String addressBarUrl;
 
     /**
      * Create a new PlaceHistoryHandler.
@@ -52,6 +54,7 @@ public class PlaceHistoryHandler {
      * Handle the current history token. Typically called at application start,
      * to ensure bookmark launches work.
      */
+    // NOT USED
     public void handleCurrentHistory() {
         handleHistoryToken(historian.getToken());
     }
@@ -133,7 +136,7 @@ public class PlaceHistoryHandler {
     }
 
     /**
-     * URL schema   perspective#screen-1,screen-2#editor-path1,editor-path2
+     * historyUrl schema   perspective#screen-1,screen-2#editor-path1,editor-path2
      * @param newPlaceRequest
      * @return
      */
@@ -143,57 +146,66 @@ public class PlaceHistoryHandler {
             return "";
         }
 
-//        GWT.log("URL -> " + URL);
-        return URL;
+//        GWT.log("historyUrl -> " + historyUrl);
+        return historyUrl;
     }
 
     /**
-     * Returns true if anf
+     * Returns true if the perspective is present in the URL
      * @return
      */
-    private boolean isPerspectiveInUrl() {
-        return (isNotBlank(URL) && URL.indexOf("|") > 0);
+    private boolean isPerspectiveInUrl() { // FIXME don't think this method overload is really needed
+        return isPerspectiveInUrl(historyUrl);
     }
 
-    private void removeScreenFromUrl(String screen)
-    {
-
+    private boolean isPerspectiveInUrl(String url) {
+        return (isNotBlank(url) && (url.indexOf("|") > 0));
     }
 
-    private void addScreenToUrl(String screen)
-    {
+    private void removeScreenFromUrl(String screen) {
+        // SILLY string analysis
+        if ((historyUrl.indexOf('$') > 0 && historyUrl.indexOf(screen) < historyUrl.indexOf('$'))
+                || historyUrl.indexOf('$') == -1) {
+            historyUrl = historyUrl.replace(screen,
+                                            "~".concat(screen));
+        } else {
+            // simply delete from the historyUrl
+            historyUrl = historyUrl.replace(screen,
+                                            "");
+        }
+        // always get rid of double commas
+        historyUrl = historyUrl.replace(",,",
+                                        ",");
+        if (historyUrl.endsWith("$")) {
+            historyUrl = historyUrl.substring(0,
+                                              historyUrl.indexOf('$'));
+        }
+    }
+
+    private void addScreenToUrl(String screen) {
         String negatedScreen = "~".concat(screen);
 
-        if (URL.indexOf(negatedScreen) != -1)
-        {
-            URL = URL.replace(negatedScreen, screen);
-        }
-        else if (URL.indexOf(screen) > 0)
-        {
+        if (historyUrl.indexOf(negatedScreen) != -1) {
+            historyUrl = historyUrl.replace(negatedScreen,
+                                            screen);
+        } else if (historyUrl.indexOf(screen) > 0) {
             // do nothing the screen is already present
-        }
-        else if (!isPerspectiveInUrl())
-        {
+        } else if (!isPerspectiveInUrl()) {
             // must add the screen in the group of the current perspective (which is not yet loaded)
-            if (isNotBlank(URL))
-            {
-                URL = URL.concat(",").concat(screen);
+            if (isNotBlank(historyUrl)) {
+                historyUrl = historyUrl.concat(",").concat(screen);
+            } else {
+                historyUrl = screen;
             }
-            else
-            {
-                URL = screen;
-            }
-        }
-        else
-        {
+        } else {
             // this is a screen outside the current perspective
-            if (URL.indexOf("$") == -1) {
+            if (historyUrl.indexOf("$") == -1) {
                 // add the '$' if needed
-                URL = URL.concat("$").concat(screen);
+                historyUrl = historyUrl.concat("$").concat(screen);
             }
             // otherwise append the screen after the last element
             else {
-                URL = URL.concat(",").concat(screen);
+                historyUrl = historyUrl.concat(",").concat(screen);
             }
         }
     }
@@ -215,28 +227,9 @@ public class PlaceHistoryHandler {
             GWT.log("    >>> path: " + place.getPath());
         }
         if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
-            URL = screen.concat("|").concat(URL);
+            historyUrl = screen.concat("|").concat(historyUrl);
         } else if (activity.isType(ActivityResourceType.SCREEN.name())) {
-//            // if the screen is NOT in the existing URL...
-//            if (isPerspectiveInUrl() && URL.indexOf(id) == -1) {
-//                // ... if the URL does NOT end with a '$' add it
-//                if (URL.indexOf("$") == -1) {
-//                    URL = URL.concat("$").concat(id);
-//                }
-//                // otherwise append the screen after the last element
-//                else {
-//                    URL = URL.concat(",").concat(id);
-//                }
-//            } else if (!isPerspectiveInUrl()){
-//                // add the screen to the perspective group if it isn't there already
-//                if (URL.indexOf(id) == -1)
-//                {
-//                    if (isNotBlank(URL)) {
-//                        URL = URL.concat(",");
-//                    }
-//                    URL = URL.concat(place.getIdentifier());
-//                }
-//            }
+            // add screen to the historyUrl
             addScreenToUrl(screen);
         }
         onPlaceChange(place);
@@ -244,47 +237,45 @@ public class PlaceHistoryHandler {
 
     // This gets called only when opening recursively all the screens of a perspective
     public void register(PlaceRequest place) {
-//        if (isNotBlank(URL)) {
-//            URL = URL.concat(",");
-//        }
-//        URL = URL.concat(place.getIdentifier());
+        // FIXME delete this!, not used
+    }
+
+    public PlaceRequest getPerspectiveFromUrl(PlaceRequest place)
+    {
+        addressBarUrl = place.getIdentifier();
+        if (isPerspectiveInUrl(addressBarUrl)) {
+            String perspectiveName = addressBarUrl.substring(0,
+                                                             addressBarUrl.indexOf("|"));
+            GWT.log(">>> perspective in the ADDRESS BAR: " + perspectiveName);
+            place = new DefaultPlaceRequest(perspectiveName);
+        }
+        return place;
     }
 
     public void registerClose(Activity activity,
                               PlaceRequest place) {
         String id = place.getFullIdentifier();
 
-        GWT.log(" ~~ removing token ~~ " + activity.getResourceType().getName() + ":" + place.getIdentifier());
-        if (place.getPath() != null) {
-            GWT.log("    >>> path: " + place.getPath());
-        }
+//        GWT.log(" ~~ removing token ~~ " + activity.getResourceType().getName() + ":" + place.getIdentifier());
+//        if (place.getPath() != null) {
+//            GWT.log("    >>> path: " + place.getPath());
+//        }
         if (activity.isType(ActivityResourceType.SCREEN.name())) {
-            // SILLY string analysis
-            if ((URL.indexOf('$') > 0 && URL.indexOf(id) < URL.indexOf('$'))
-                    || URL.indexOf('$') == -1) {
-                URL = URL.replace(id,
-                                  "~".concat(id));
-            } else {
-                // simply delete from the URL
-                URL = URL.replace(id,
-                                  "");
-            }
-            URL = URL.replace(",,",
-                              ",");
-            if (URL.endsWith("$")) {
-                URL = URL.substring(0,
-                                    URL.indexOf('$'));
-            }
+            removeScreenFromUrl(id);
         } else {
             // suppress CQ warnings
         }
-        // update URL
+        // update historyUrl
         onPlaceChange(place);
     }
 
     public void flush() {
 //        GWT.log(" ~~ flushing history line ~~");
-        URL = "";
+        historyUrl = "";
+    }
+
+    public String getToken() {
+        return (historian.getToken());
     }
 
     /**

@@ -280,6 +280,7 @@ public class PlaceManagerImpl
             // matteo
             placeHistoryHandler.register(activity,
                                          place);
+            GWT.log("???? " + placeHistoryHandler.getToken());
         } else {
             goTo(resolved.getPlaceRequest(),
                  panel,
@@ -332,7 +333,10 @@ public class PlaceManagerImpl
      * TODO (UF-94) : make this simpler. with enough tests in place, we should experiment with doing the recursive
      * lookup automatically.
      */
-    private ResolvedRequest resolveActivity(final PlaceRequest place) {
+    private ResolvedRequest resolveActivity(final PlaceRequest request) {
+
+        GWT.log(" ~~~ RESOLVING ~~~ " + request.getIdentifier());
+        final PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(request);
 
         final PlaceRequest resolvedPlaceRequest = resolvePlaceRequest(place);
 
@@ -353,6 +357,7 @@ public class PlaceManagerImpl
                 return new ResolvedRequest(null,
                                            notFoundPopup);
             } else {
+                // matteo unknown activity
                 final PlaceRequest ufNotFoundPopup = new DefaultPlaceRequest("uf.workbench.activity.notfound");
                 ufNotFoundPopup.addParameter("requestedPlaceIdentifier",
                                              place.getIdentifier());

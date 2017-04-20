@@ -217,6 +217,7 @@ public class Workbench {
             final PerspectiveActivity homePerspective = getHomePerspectiveActivity();
             if (homePerspective != null) {
                 appReady.fire(new ApplicationReadyEvent());
+                GWT.log("===LAUNCHING DEFAULT PERSPECTIVE===");
                 placeManager.goTo(new DefaultPlaceRequest(homePerspective.getIdentifier()));
             } else {
                 logger.error("No home perspective available!");

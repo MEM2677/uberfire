@@ -238,7 +238,17 @@ public class PlaceManagerImpl
         }
         final ResolvedRequest resolved = resolveActivity(place);
 
-        GWT.log("START: " + placeHistoryHandler.getToken());
+        // matteo
+        if (resolved.getActivity().isType(ActivityResourceType.PERSPECTIVE.name()))
+        {
+            PerspectiveActivity old = perspectiveManager.getCurrentPerspective();
+
+            if (old != null && null != old.getPlace()) {
+                GWT.log("CURRENT PERSPECTIVE: [ " + old.getPlace().getFullIdentifier() +" ]");
+            }
+            GWT.log("START: [ " + placeHistoryHandler.getToken() + " ]");
+            GWT.log("REQ: [ " + place.getIdentifier() + " ]");
+        }
 
         if (resolved.getActivity() != null) {
             final Activity activity = resolved.getActivity();
@@ -270,18 +280,37 @@ public class PlaceManagerImpl
                                     (PopupActivity) activity);
                 doWhenFinished.execute();
             } else if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
+
+                // clean the URL
+                placeHistoryHandler.flush();
+
                 // Matteo we are about to switch to a perspective
                 GWT.log("=========== START ===========");
                 launchPerspectiveActivity(place,
                                           (PerspectiveActivity) activity,
                                           doWhenFinished);
+                GWT.log("=========== PROCESSING ===========");
+                // matteo EXPERIMENTAL closing of the screens in real time as the
+                // content of the address bar changes
+                List<String> closing = placeHistoryHandler.getClosedScreenFromUrl();
+                if (!closing.isEmpty())
+                {
+                    for (String screen: closing) {
+                        GWT.log(" CLOSING SCREEN " + screen.substring(1));
+                        closePlace(screen);
+                    }
+                }
                 GWT.log("=========== END ===========");
+
+                /*
+                 *  track the perspective - this placing is strategic as we know that all the
+                 *  screens previously opened belong to the current perspective
+                 */
+                placeHistoryHandler.register(activity, place);
+
                 // matteo in this point perspective is loaded and all default screen are open
             }
 
-            // matteo
-            placeHistoryHandler.register(activity,
-                                         place);
         } else {
             goTo(resolved.getPlaceRequest(),
                  panel,
@@ -336,7 +365,7 @@ public class PlaceManagerImpl
      */
     private ResolvedRequest resolveActivity(final PlaceRequest request) {
 
-        GWT.log(" ~~~ RESOLVING ~~~ " + request.getIdentifier());
+        // matteo get the request stripping the state of the screens
         final PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(request);
 
         final PlaceRequest resolvedPlaceRequest = resolvePlaceRequest(place);
@@ -348,17 +377,6 @@ public class PlaceManagerImpl
         }
 
         final Set<Activity> activities = activityManager.getActivities(resolvedPlaceRequest);
-
-        if (place.getIdentifier().equals(request.getIdentifier()))
-        {
-            GWT.log("PERSPECTIVE IS THE SAME");
-        }
-        else
-        {
-            GWT.log("PERSPECTIVE IS THE DIFFERENT");
-        }
-
-
         if (activities == null || activities.size() == 0) {
             final PlaceRequest notFoundPopup = new DefaultPlaceRequest("workbench.activity.notfound");
             notFoundPopup.addParameter("requestedPlaceIdentifier",
@@ -769,7 +787,6 @@ public class PlaceManagerImpl
         addSplashScreenFor(place);
 
         try {
-            GWT.log("---1---");
             activity.onOpen();
         } catch (Exception ex) {
             lifecycleErrorHandler.handle(activity,
@@ -807,7 +824,6 @@ public class PlaceManagerImpl
                          activity);
 
         try {
-            GWT.log("---2---");
             activity.onOpen();
         } catch (Exception ex) {
             activePopups.remove(place.getIdentifier());
@@ -828,8 +844,6 @@ public class PlaceManagerImpl
                                            final PerspectiveActivity activity,
                                            final Command doWhenFinished) {
 
-        placeHistoryHandler.flush();
-
         // process the URL to extract the perspective definition
         final PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(request);
 
@@ -849,17 +863,7 @@ public class PlaceManagerImpl
                                 });
         } else {
             final PerspectiveActivity oldPerspectiveActivity = perspectiveManager.getCurrentPerspective();
-
-//            GWT.log("NEW    : " + place.getIdentifier());
-//            if (null != oldPerspectiveActivity) {
-//                GWT.log("OLD    : " + oldPerspectiveActivity.getPlace().getIdentifier());
-//            }
-//            if (null != placeHistoryHandler.getToken()) {
-//                GWT.log("CACHED : " + placeHistoryHandler.getToken());
-//            }
-
             if (oldPerspectiveActivity != null && place.equals(oldPerspectiveActivity.getPlace())) {
-//                GWT.log("§§§§ SAME PERSPECTIVE §§§§");
                 return;
             }
 
@@ -868,7 +872,6 @@ public class PlaceManagerImpl
                 public void execute() {
                     // first try to open the new perspective, so we can avoid leaving the user on a blank screen if the onOpen() method fails
                     try {
-                        GWT.log("---3---");
                         activity.onOpen();
                     } catch (Exception ex) {
                         lifecycleErrorHandler.handle(activity,

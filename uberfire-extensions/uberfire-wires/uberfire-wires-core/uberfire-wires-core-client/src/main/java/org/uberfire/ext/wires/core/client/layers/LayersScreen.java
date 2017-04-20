@@ -28,12 +28,14 @@ import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.IsWidget;
 import com.google.gwt.user.client.ui.SimplePanel;
 import com.google.gwt.user.client.ui.Widget;
+import org.gwtbootstrap3.client.ui.Button;
 import org.gwtbootstrap3.client.ui.PanelCollapse;
 import org.gwtbootstrap3.client.ui.PanelGroup;
 import org.gwtbootstrap3.client.ui.PanelHeader;
 import org.uberfire.client.annotations.WorkbenchPartTitle;
 import org.uberfire.client.annotations.WorkbenchPartView;
 import org.uberfire.client.annotations.WorkbenchScreen;
+import org.uberfire.client.mvp.PlaceManager;
 import org.uberfire.ext.wires.core.api.events.ClearEvent;
 import org.uberfire.ext.wires.core.api.events.ShapeAddedEvent;
 import org.uberfire.ext.wires.core.api.events.ShapeDeletedEvent;
@@ -55,14 +57,24 @@ public class LayersScreen extends Composite {
     PanelHeader headerLayers;
 
     @UiField
+    Button clickMe;
+
+    @UiField
     PanelCollapse collapseLayers;
     @Inject
     private LayersGroup layersGroup;
     @Inject
     private ShapeFactoryCache factoriesCache;
 
+    @Inject
+    PlaceManager p;
+
+    boolean toggle;
+
     @PostConstruct
     public void init() {
+        toggle = true;
+
         initWidget(uiBinder.createAndBindUi(this));
 
         accordion.setId(DOM.createUniqueId());
@@ -70,6 +82,17 @@ public class LayersScreen extends Composite {
         headerLayers.setDataTargetWidget(collapseLayers);
 
         layers.add(layersGroup);
+        clickMe.addClickHandler(c -> {
+            if (toggle) {
+                p.goTo("PagedTableScreen");
+            }
+            else
+            {
+                p.closePlace("PagedTableScreen");
+                p.goTo("WiresScratchPadScreen");
+            }
+            toggle ^= true;
+        });
     }
 
     @WorkbenchPartTitle

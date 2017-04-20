@@ -28,6 +28,7 @@
   <g:SimplePanel styleName="{style.layers}">
     <b:PanelGroup ui:field="accordion">
       <b:Panel>
+        <b:Button ui:field="clickMe">ClickMe</b:Button>
         <b:PanelHeader dataToggle="COLLAPSE" text="Layers" ui:field="headerLayers"/>
         <b:PanelCollapse ui:field="collapseLayers" in="true">
           <b:PanelBody>

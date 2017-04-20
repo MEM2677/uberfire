@@ -5,6 +5,10 @@
   <inherits name='com.google.gwt.user.User'/>
   <inherits name="org.jboss.errai.bus.ErraiBus"/>
   <inherits name="org.jboss.errai.ioc.Container"/>
+  <!-- Modified by M. Minnai to fix compilation issues -->
+  <inherits name="org.uberfire.UberfireClient"/>
+  <inherits name="com.ait.lienzo.Lienzo"/>
+  <inherits name="org.gwtbootstrap3.GwtBootstrap3"/>
 
   <source path="client"></source>
 </module>

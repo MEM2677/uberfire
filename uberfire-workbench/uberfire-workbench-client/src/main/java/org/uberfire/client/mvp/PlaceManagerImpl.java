@@ -30,6 +30,7 @@ import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.user.client.ui.HasWidgets;
 import com.google.gwt.user.client.ui.IsWidget;
@@ -237,6 +238,18 @@ public class PlaceManagerImpl
         }
         final ResolvedRequest resolved = resolveActivity(place);
 
+        // matteo
+        if (resolved.getActivity().isType(ActivityResourceType.PERSPECTIVE.name()))
+        {
+            PerspectiveActivity old = perspectiveManager.getCurrentPerspective();
+
+            if (old != null && null != old.getPlace()) {
+                GWT.log("CURRENT PERSPECTIVE: [ " + old.getPlace().getFullIdentifier() +" ]");
+            }
+            GWT.log("START: [ " + placeHistoryHandler.getToken() + " ]");
+            GWT.log("REQ: [ " + place.getIdentifier() + " ]");
+        }
+
         if (resolved.getActivity() != null) {
             final Activity activity = resolved.getActivity();
             if (activity.isType(ActivityResourceType.SCREEN.name()) || activity.isType(ActivityResourceType.EDITOR.name())) {
@@ -267,10 +280,37 @@ public class PlaceManagerImpl
                                     (PopupActivity) activity);
                 doWhenFinished.execute();
             } else if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
+
+                // clean the URL
+                placeHistoryHandler.flush();
+
+                // Matteo we are about to switch to a perspective
+                GWT.log("=========== START ===========");
                 launchPerspectiveActivity(place,
                                           (PerspectiveActivity) activity,
                                           doWhenFinished);
+                GWT.log("=========== PROCESSING ===========");
+                // matteo EXPERIMENTAL closing of the screens in real time as the
+                // content of the address bar changes
+                List<String> closing = placeHistoryHandler.getClosedScreenFromUrl();
+                if (!closing.isEmpty())
+                {
+                    for (String screen: closing) {
+                        GWT.log(" CLOSING SCREEN " + screen.substring(1));
+                        closePlace(screen);
+                    }
+                }
+                GWT.log("=========== END ===========");
+
+                /*
+                 *  track the perspective - this placing is strategic as we know that all the
+                 *  screens previously opened belong to the current perspective
+                 */
+                placeHistoryHandler.register(activity, place);
+
+                // matteo in this point perspective is loaded and all default screen are open
             }
+
         } else {
             goTo(resolved.getPlaceRequest(),
                  panel,
@@ -323,7 +363,10 @@ public class PlaceManagerImpl
      * TODO (UF-94) : make this simpler. with enough tests in place, we should experiment with doing the recursive
      * lookup automatically.
      */
-    private ResolvedRequest resolveActivity(final PlaceRequest place) {
+    private ResolvedRequest resolveActivity(final PlaceRequest request) {
+
+        // matteo get the request stripping the state of the screens
+        final PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(request);
 
         final PlaceRequest resolvedPlaceRequest = resolvePlaceRequest(place);
 
@@ -334,7 +377,6 @@ public class PlaceManagerImpl
         }
 
         final Set<Activity> activities = activityManager.getActivities(resolvedPlaceRequest);
-
         if (activities == null || activities.size() == 0) {
             final PlaceRequest notFoundPopup = new DefaultPlaceRequest("workbench.activity.notfound");
             notFoundPopup.addParameter("requestedPlaceIdentifier",
@@ -344,6 +386,7 @@ public class PlaceManagerImpl
                 return new ResolvedRequest(null,
                                            notFoundPopup);
             } else {
+                // matteo unknown activity
                 final PlaceRequest ufNotFoundPopup = new DefaultPlaceRequest("uf.workbench.activity.notfound");
                 ufNotFoundPopup.addParameter("requestedPlaceIdentifier",
                                              place.getIdentifier());
@@ -713,7 +756,13 @@ public class PlaceManagerImpl
 
         visibleWorkbenchParts.put(place,
                                   part);
+
         getPlaceHistoryHandler().onPlaceChange(place);
+
+        // added by matteo
+//        GWT.log(">> " + activity.getResourceType().getName()); // Matteo
+        getPlaceHistoryHandler().register(activity,
+                                          place);
 
         final IsWidget titleDecoration = maybeWrapExternalWidget(activity,
                                                                  () -> activity.getTitleDecorationElement(),
@@ -767,6 +816,9 @@ public class PlaceManagerImpl
         }
 
         getPlaceHistoryHandler().onPlaceChange(place);
+        // modified by Matteo
+        getPlaceHistoryHandler().register(activity,
+                                          place);
 
         activePopups.put(place.getIdentifier(),
                          activity);
@@ -781,9 +833,19 @@ public class PlaceManagerImpl
         }
     }
 
-    private void launchPerspectiveActivity(final PlaceRequest place,
+    /**
+     * Before launching the perspective we check that it isn't already open by asking the
+     * placeHistory service to extract the perspective encoded in the URL
+     * @param request
+     * @param activity
+     * @param doWhenFinished
+     */
+    private void launchPerspectiveActivity(final PlaceRequest request,
                                            final PerspectiveActivity activity,
                                            final Command doWhenFinished) {
+
+        // process the URL to extract the perspective definition
+        final PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(request);
 
         checkNotNull("doWhenFinished",
                      doWhenFinished);
@@ -879,9 +941,13 @@ public class PlaceManagerImpl
      * Opens all the parts of the given panel and its subpanels. This is a subroutine of the perspective switching
      * process.
      */
-    private void openPartsRecursively(PanelDefinition panel) {
+    private void openPartsRecursively(PanelDefinition panel) { // Matteo
+        // Matteo Investigate how this works
+        // Load the definition and perform a goto for each def - only for the NWSE perspective
         for (PartDefinition part : ensureIterable(panel.getParts())) {
             final PlaceRequest place = part.getPlace().clone();
+
+            placeHistoryHandler.register(place);
             part.setPlace(place);
             goTo(part,
                  panel);
@@ -934,6 +1000,10 @@ public class PlaceManagerImpl
                 return;
             }
         }
+
+        // modified by Matteo
+        getPlaceHistoryHandler().registerClose(activity,
+                                               place);
 
         workbenchPartCloseEvent.fire(new ClosePlaceEvent(place));
 

@@ -126,5 +126,8 @@ public class PlaceRequestHistoryMapperImplTest {
                      placeRequest.getIdentifier());
         assertEquals(placeRequest.getParameters().get("par&am 1"),
                      "value 1");
+
+
     }
+
 }

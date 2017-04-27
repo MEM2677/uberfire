@@ -17,6 +17,7 @@ package org.uberfire.client.mvp;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.StringJoiner;
 import java.util.logging.Logger;
 import javax.enterprise.context.Dependent;
@@ -176,14 +177,15 @@ public class PlaceHistoryHandler {
             }
             // paranoid check
             while (historyUrl.length() >= MAX_NAV_URL_SIZE) {
-                historyUrl = historyUrl.substring(0, MAX_NAV_URL_SIZE);
+                historyUrl = historyUrl.substring(0,
+                                                  MAX_NAV_URL_SIZE);
             }
         }
         return historyUrl;
     }
 
     /**
-     * Check whether teh string is valid
+     * Check whether the string is valid
      * @param str
      * @return
      */
@@ -235,8 +237,7 @@ public class PlaceHistoryHandler {
         String negatedScreen = NEGATION_PREFIX.concat(screen);
 
         if (isNotBlank(screen) && isNotBlank(historyUrl) &&
-                historyUrl.length() + screen.length() >= MAX_NAV_URL_SIZE)
-        {
+                historyUrl.length() + screen.length() >= MAX_NAV_URL_SIZE) {
             GWT.log("ignoring screen '" + screen + "' to avoid a lengthy URL");
             return;
         }
@@ -304,7 +305,7 @@ public class PlaceHistoryHandler {
 
     /**
      * Get the perspective id from the URL.
-     * @param place
+     * @param place\
      * @return
      */
     public PlaceRequest getPerspectiveFromUrl(PlaceRequest place) {
@@ -315,7 +316,16 @@ public class PlaceHistoryHandler {
 //            GWT.log(">>> perspective in the ADDRESS BAR: " + perspectiveName);
 
             // FIXME CREATE A SMALL FACTORY - THE OBJECT MUST BE OF THE SAME TYPE
-            place = new DefaultPlaceRequest(perspectiveName);
+            DefaultPlaceRequest copy = new DefaultPlaceRequest(perspectiveName);
+
+            // copy arguments
+            if (!place.getParameters().isEmpty()) {
+                for (Map.Entry<String, String> elem : place.getParameters().entrySet()) {
+                    copy.addParameter(elem.getKey(),
+                                      elem.getValue());
+                }
+            }
+            return copy;
         }
         return place;
     }

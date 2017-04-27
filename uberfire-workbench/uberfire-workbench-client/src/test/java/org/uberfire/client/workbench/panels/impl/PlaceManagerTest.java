@@ -22,9 +22,11 @@ import java.util.Collection;
 import java.util.HashSet;
 import javax.enterprise.context.Dependent;
 import javax.enterprise.event.Event;
+import javax.enterprise.inject.Any;
 
 import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.user.client.ui.HasWidgets;
+import com.google.gwtmockito.GwtMockitoTestRunner;
 import org.jboss.errai.common.client.dom.HTMLElement;
 import org.jboss.errai.ioc.client.QualifierUtil;
 import org.jboss.errai.ioc.client.container.IOC;
@@ -32,9 +34,11 @@ import org.jboss.errai.ioc.client.container.SyncBeanManagerImpl;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.AdditionalAnswers;
 import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.mockito.stubbing.Answer;
@@ -107,6 +111,10 @@ public class PlaceManagerTest {
      */
     private final PanelDefinition rootPanel = new PanelDefinitionImpl(
             MultiListWorkbenchPanelPresenter.class.getName());
+
+    // Matteo
+//    private final PlaceHistoryHandler placeHistoryHandler = mock(PlaceHistoryHandler.class);
+
     @Mock
     Event<BeforeClosePlaceEvent> workbenchPartBeforeCloseEvent;
     @Mock
@@ -129,6 +137,7 @@ public class PlaceManagerTest {
     WorkbenchLayout workbenchLayout;
     @Mock
     LayoutSelection layoutSelection;
+
     /**
      * This is the thing we're testing. Weeee!
      */
@@ -170,6 +179,9 @@ public class PlaceManagerTest {
         when(kansasActivity.preferredWidth()).thenReturn(123);
         when(kansasActivity.preferredHeight()).thenReturn(456);
 
+        when(placeHistoryHandler.getPerspectiveFromUrl(any()))
+                .thenAnswer(i -> i.getArgumentAt(0, PlaceRequest.class));
+
         // arrange for the mock PerspectiveManager to invoke the doWhenFinished callbacks
         doAnswer(new Answer<Void>() {
             @SuppressWarnings({"rawtypes", "unchecked"})
@@ -191,6 +203,9 @@ public class PlaceManagerTest {
                 return null;
             }
         }).when(perspectiveManager).savePerspectiveState(any(Command.class));
+
+        //when(placeHistoryHandler.getPerspectiveFromUrl(any())).then(AdditionalAnswers.returnsFirstArg());
+        when(placeHistoryHandler.getPerspectiveFromUrl(any())).then(AdditionalAnswers.returnsFirstArg());
     }
 
     /**
@@ -1109,6 +1124,9 @@ public class PlaceManagerTest {
 
     @Test
     public void testCloseAllPlacesOrNothingFails() throws Exception {
+
+        //  matteo
+
         PlaceRequest emeraldCityPlace = new DefaultPlaceRequest("emerald_city");
         WorkbenchScreenActivity emeraldCityActivity = createWorkbenchScreenActivity(emeraldCityPlace);
         doReturn(false).when(emeraldCityActivity).onMayClose();

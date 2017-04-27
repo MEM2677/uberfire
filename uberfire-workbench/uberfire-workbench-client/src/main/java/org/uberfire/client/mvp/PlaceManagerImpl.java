@@ -366,7 +366,10 @@ public class PlaceManagerImpl
     private ResolvedRequest resolveActivity(final PlaceRequest request) {
 
         // matteo get the request stripping the state of the screens
-        final PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(request);
+        PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(request);
+
+        System.out.println(">>> " + request.getIdentifier());
+        System.out.println(">>> " + place.getIdentifier());
 
         final PlaceRequest resolvedPlaceRequest = resolvePlaceRequest(place);
 

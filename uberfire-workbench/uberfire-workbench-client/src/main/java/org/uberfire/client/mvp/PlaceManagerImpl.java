@@ -48,6 +48,7 @@ import org.uberfire.client.mvp.ActivityLifecycleError.LifecyclePhase;
 import org.uberfire.client.workbench.LayoutSelection;
 import org.uberfire.client.workbench.PanelManager;
 import org.uberfire.client.workbench.WorkbenchLayout;
+import org.uberfire.client.workbench.docks.UberfireDocks;
 import org.uberfire.client.workbench.events.BeforeClosePlaceEvent;
 import org.uberfire.client.workbench.events.ClosePlaceEvent;
 import org.uberfire.client.workbench.events.NewSplashScreenActiveEvent;
@@ -126,12 +127,14 @@ public class PlaceManagerImpl
     private WorkbenchLayout workbenchLayout;
     @Inject
     private LayoutSelection layoutSelection;
+    @Inject
+    private UberfireDocks uberfireDocks;
 
     @PostConstruct
     public void initPlaceHistoryHandler() {
-        getPlaceHistoryHandler().register(this,
-                                          produceEventBus(),
-                                          DefaultPlaceRequest.NOWHERE);
+        getPlaceHistoryHandler().registerOpen(this,
+                                              produceEventBus(),
+                                              DefaultPlaceRequest.NOWHERE);
         workbenchLayout = layoutSelection.get();
     }
 
@@ -306,7 +309,9 @@ public class PlaceManagerImpl
                  *  track the perspective - this placing is strategic as we know that all the
                  *  screens previously opened belong to the current perspective
                  */
-                placeHistoryHandler.register(activity, place);
+                boolean isDock = isScreenDocked(activity, place);
+                placeHistoryHandler.registerOpen(activity, place,
+                                                 isDock);
 
                 // matteo in this point perspective is loaded and all default screen are open
             }
@@ -368,8 +373,8 @@ public class PlaceManagerImpl
         // matteo get the request stripping the state of the screens
         PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(request);
 
-        System.out.println(">>> " + request.getIdentifier());
-        System.out.println(">>> " + place.getIdentifier());
+        System.out.println(">>>> " + request.getIdentifier());
+        System.out.println(">>>> " + place.getIdentifier());
 
         final PlaceRequest resolvedPlaceRequest = resolvePlaceRequest(place);
 
@@ -764,8 +769,10 @@ public class PlaceManagerImpl
 
         // added by matteo
 //        GWT.log(">> " + activity.getResourceType().getName()); // Matteo
-        getPlaceHistoryHandler().register(activity,
-                                          place);
+        boolean isDock = isScreenDocked(activity, place);
+        getPlaceHistoryHandler().registerOpen(activity,
+                                              place,
+                                              isDock);
 
         final IsWidget titleDecoration = maybeWrapExternalWidget(activity,
                                                                  () -> activity.getTitleDecorationElement(),
@@ -820,8 +827,10 @@ public class PlaceManagerImpl
 
         getPlaceHistoryHandler().onPlaceChange(place);
         // modified by Matteo
-        getPlaceHistoryHandler().register(activity,
-                                          place);
+        boolean isDock = isScreenDocked(activity, place);
+        getPlaceHistoryHandler().registerOpen(activity,
+                                              place,
+                                              isDock);
 
         activePopups.put(place.getIdentifier(),
                          activity);
@@ -950,7 +959,6 @@ public class PlaceManagerImpl
         for (PartDefinition part : ensureIterable(panel.getParts())) {
             final PlaceRequest place = part.getPlace().clone();
 
-            placeHistoryHandler.register(place);
             part.setPlace(place);
             goTo(part,
                  panel);
@@ -1005,8 +1013,10 @@ public class PlaceManagerImpl
         }
 
         // modified by Matteo
+        boolean isDock = isScreenDocked(activity, place);
         getPlaceHistoryHandler().registerClose(activity,
-                                               place);
+                                               place,
+                                               isDock);
 
         workbenchPartCloseEvent.fire(new ClosePlaceEvent(place));
 
@@ -1025,6 +1035,26 @@ public class PlaceManagerImpl
         if (place instanceof PathPlaceRequest) {
             ((PathPlaceRequest) place).getPath().dispose();
         }
+    }
+
+    /**
+     * Check whether the current screen is docked
+     * @param place
+     * @return
+     */
+    private boolean isScreenDocked(Activity activity, PlaceRequest place)
+    {
+        boolean isDocked = false;
+
+        Activity currentActivity = perspectiveManager.getCurrentPerspective();
+        if (activity.isType(ActivityResourceType.SCREEN.name())) {
+            String perspectiveName = currentActivity.getIdentifier();
+            String screenName = place.getIdentifier();
+
+            isDocked =
+                    uberfireDocks.isScreenDockedInPerspective(perspectiveName, screenName);
+        }
+        return isDocked;
     }
 
     private boolean canClosePlace(final PlaceRequest place) {

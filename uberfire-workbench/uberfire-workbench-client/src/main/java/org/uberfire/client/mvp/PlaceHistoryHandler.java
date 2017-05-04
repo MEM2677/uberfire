@@ -16,12 +16,13 @@
 package org.uberfire.client.mvp;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.logging.Logger;
 import javax.enterprise.context.Dependent;
-import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
 import com.google.gwt.core.client.GWT;
@@ -30,7 +31,6 @@ import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.user.client.History;
 import com.google.web.bindery.event.shared.EventBus;
 import com.google.web.bindery.event.shared.HandlerRegistration;
-import org.uberfire.client.workbench.events.PlaceGainFocusEvent;
 import org.uberfire.mvp.PlaceRequest;
 import org.uberfire.mvp.impl.DefaultPlaceRequest;
 import org.uberfire.workbench.model.ActivityResourceType;
@@ -45,14 +45,15 @@ public class PlaceHistoryHandler {
     private PlaceManager placeManager;
     private PlaceRequest defaultPlaceRequest = PlaceRequest.NOWHERE;
     /* This is the 'state' string that will be shown in the address bar */
-    private String historyUrl;
+    private String historyUrl = "";
     /* this should be an incoming request from the browser */
-    private String addressBarUrl;
+    private String addressBarUrl = "";
 
     public final static String PERSPECTIVE_SEP = "|";
     public final static String SCREEN_SEP = ",";
     public final static String OTHER_SCREEN_SEP = "$";
     public final static String NEGATION_PREFIX = "~";
+    public final static String DOCK_PREFIX = "!";
 
     public final static int MAX_NAV_URL_SIZE = 1900;
 
@@ -76,9 +77,9 @@ public class PlaceHistoryHandler {
      * Initialize this place history handler.
      * @return a registration object to de-register the handler
      */
-    public HandlerRegistration register(final PlaceManager placeManager,
-                                        final EventBus eventBus,
-                                        final PlaceRequest defaultPlaceRequest) {
+    public HandlerRegistration registerOpen(final PlaceManager placeManager,
+                                            final EventBus eventBus,
+                                            final PlaceRequest defaultPlaceRequest) {
         this.placeManager = placeManager;
         this.defaultPlaceRequest = defaultPlaceRequest;
         /*
@@ -117,16 +118,37 @@ public class PlaceHistoryHandler {
         }
     }
 
-    // seful for the corner cases  (eg. editor with a screen opened in it)
-//    private void onWorkbenchPartOnFocus(@Observes PlaceGainFocusEvent event) {
-//        GWT.log(">>> " + event.getPlace().getFullIdentifier());
-//    }
+    /*
+    // Useful for the corner cases  (eg. editor with a screen opened in it)
+    private void onWorkbenchPartOnFocus(@Observes PlaceGainFocusEvent event) {
+        GWT.log("--PlaceGainFocusEvent--");
+        GWT.log(">>> " + event.getPlace().getFullIdentifier());
+    }
+    private void onWorkbenchPartOnFocus(@Observes SelectPlaceEvent event) {
+        GWT.log("--SelectPlaceEvent--");
+        GWT.log(">>> " + event.getPlace().getFullIdentifier());
+    }
+    */
 
     /**
      * Visible for testing.
      */
     Logger log() {
         return log;
+    }
+
+    /**
+     * Visible for testing.
+     */
+    public String getHistoryUrl() {
+        return historyUrl;
+    }
+
+    /**
+     * Visible for testing.
+     */
+    public String getAddressBarUrl() {
+        return addressBarUrl;
     }
 
     private void handleHistoryToken(String token) {
@@ -201,91 +223,140 @@ public class PlaceHistoryHandler {
         return (isNotBlank(url) && (url.indexOf(PERSPECTIVE_SEP) > 0));
     }
 
+    private boolean isOtherScreenInUrl(String url) {
+        return (isNotBlank(url) && (url.indexOf(OTHER_SCREEN_SEP) > 0));
+    }
+
     private boolean isPerspectiveInUrl() { // FIXME don't think this method overload is really needed
         return isPerspectiveInUrl(historyUrl);
     }
 
     /**
-     * Handle URL - delete a closed screen
+     * Check whether the screen belongs to the currently opened perspective
      * @param screen
+     * @return
      */
-    private void removeScreenFromUrl(String screen) {
-        // SILLY string analysis
-        if ((historyUrl.indexOf('$') > 0 && historyUrl.indexOf(screen) < historyUrl.indexOf('$'))
-                || historyUrl.indexOf('$') == -1) {
-            historyUrl = historyUrl.replace(screen,
-                                            NEGATION_PREFIX.concat(screen));
-        } else {
-            // simply delete from the historyUrl
-            historyUrl = historyUrl.replace(screen,
-                                            "");
+    private boolean isPerspectiveScreen(String screen) {
+        return (isNotBlank(screen) && ((-1 == historyUrl.indexOf(OTHER_SCREEN_SEP))
+                || (historyUrl.indexOf(OTHER_SCREEN_SEP) > historyUrl.indexOf(screen))));
+    }
+
+    /**
+     * Given a screen name, this method extracts the corresponding token in the
+     * URL, that is the screen name with optional parameters and markers
+     * @param screen
+     * @return
+     */
+    private String getUrlToken(String screen) {
+        int st = isPerspectiveInUrl() ? (historyUrl.indexOf(PERSPECTIVE_SEP) + 1) : 0;
+        String screensList = historyUrl.replace(OTHER_SCREEN_SEP,
+                                                SCREEN_SEP)
+                .substring(st,
+                           historyUrl.length());
+
+        String tokens[] = screensList.split(SCREEN_SEP);
+        Optional<String> token = Arrays.asList(tokens).stream()
+                .filter(s -> s.contains(screen))
+                .findFirst();
+
+        return token.orElse(screen);
+    }
+
+    /**
+     * Handle URL - delete a closed screen
+     * @param tag
+     */
+    private void removeScreenFromUrl(String tag) {
+        final boolean isPerspective = isPerspectiveScreen(tag);
+        final String sep = isPerspective ? PERSPECTIVE_SEP : OTHER_SCREEN_SEP;
+        final String negation = "~".concat(tag);
+        final String first = sep.concat(tag); // |screen or $screen
+        final String firstComma = first.concat(SCREEN_SEP); // |screen, or $screen,
+        final String comma = tag.concat(SCREEN_SEP); // screen,
+
+        // check screen already closed
+        if (historyUrl.indexOf(negation) != -1) {
+            return;
         }
-        // always get rid of double commas
-        historyUrl = historyUrl.replace(",,",
-                                        SCREEN_SEP);
-        if (historyUrl.endsWith(OTHER_SCREEN_SEP)) {
-            historyUrl = historyUrl.substring(0,
-                                              historyUrl.indexOf('$'));
+        if (isPerspective) {
+            historyUrl = historyUrl.replace(tag,
+                                            negation);
+        } else {
+            // check for SEP + screen + ","
+            if (historyUrl.contains(firstComma)) {
+                historyUrl = historyUrl.replace(firstComma,
+                                                sep);
+            } else if (historyUrl.contains(first)) {
+                historyUrl = historyUrl.replace(first,
+                                                "");
+            } else if (historyUrl.contains(comma)) {
+                historyUrl = historyUrl.replace(comma,
+                                                "");
+            } else {
+                historyUrl = historyUrl.replace(tag,
+                                                "");
+            }
         }
     }
 
     /**
      * Handle URL - add a newly opened screen
-     * @param screen
+     * @param tag
      */
-    private void addScreenToUrl(String screen) {
-        String negatedScreen = NEGATION_PREFIX.concat(screen);
+    private void addScreenToUrl(String tag) {
+        String negatedScreen = NEGATION_PREFIX.concat(tag);
 
-        if (isNotBlank(screen) && isNotBlank(historyUrl) &&
-                historyUrl.length() + screen.length() >= MAX_NAV_URL_SIZE) {
-            GWT.log("ignoring screen '" + screen + "' to avoid a lengthy URL");
+        if (isNotBlank(tag) && isNotBlank(historyUrl) &&
+                historyUrl.length() + tag.length() >= MAX_NAV_URL_SIZE) {
+            GWT.log("ignoring screen '" + tag + "' to avoid a lengthy URL");
             return;
         }
 
         if (historyUrl.indexOf(negatedScreen) != -1) {
             historyUrl = historyUrl.replace(negatedScreen,
-                                            screen);
-        } else if (historyUrl.indexOf(screen) > 0) {
+                                            tag);
+        } else if (historyUrl.indexOf(tag) > 0) {
             // do nothing the screen is already present
         } else if (!isPerspectiveInUrl()) {
             // must add the screen in the group of the current perspective (which is not yet loaded)
             if (isNotBlank(historyUrl)) {
-                historyUrl = historyUrl.concat(SCREEN_SEP).concat(screen);
+                historyUrl = historyUrl.concat(SCREEN_SEP).concat(tag);
             } else {
-                historyUrl = screen;
+                historyUrl = tag;
             }
         } else {
             // this is a screen outside the current perspective
             if (historyUrl.indexOf(OTHER_SCREEN_SEP) == -1) {
                 // add the '$' if needed
-                historyUrl = historyUrl.concat(OTHER_SCREEN_SEP).concat(screen);
+                historyUrl = historyUrl.concat(OTHER_SCREEN_SEP).concat(tag);
             }
             // otherwise append the screen after the last element
             else {
-                historyUrl = historyUrl.concat(SCREEN_SEP).concat(screen);
+                historyUrl = historyUrl.concat(SCREEN_SEP).concat(tag);
             }
         }
     }
 
     /**
-     * The behaviour is simple: when opening the perspective the perspective itself
-     * is the last element to be called with a goTo(), being the screens first.
-     * We assume that every screen opened with a goTo() before the perspective is called
-     * belongs to the same perspective
+     * register opened screen of perspective
      * @param activity
      * @param place
+     * @param isDock
      */
-    public void register(Activity activity,
-                         PlaceRequest place) {
-        String screen = place.getFullIdentifier();
+    public void registerOpen(Activity activity,
+                             PlaceRequest place,
+                             boolean isDock) {
+        String id = isDock ? DOCK_PREFIX.concat(place.getFullIdentifier())
+                : place.getFullIdentifier();
 
-//        GWT.log(" ~~ adding token ~~ " + activity.getResourceType().getName() + ":" + place.getFullIdentifier());
+//        GWT.log(" ~~ adding token ~~ " + activity.getResourceType().getName() + ":" + id + " docks " + historyUrl.toString());
 //        if (place.getPath() != null) {
 //            GWT.log("    >>> path: " + place.getPath());
 //        }
+
         if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
             if (!isPerspectiveInUrl(addressBarUrl)) {
-                historyUrl = screen.concat(PERSPECTIVE_SEP).concat(historyUrl);
+                historyUrl = id.concat(PERSPECTIVE_SEP).concat(historyUrl);
             } else {
                 if (!isNotBlank(historyUrl)) {
                     historyUrl = addressBarUrl;
@@ -293,14 +364,9 @@ public class PlaceHistoryHandler {
             }
         } else if (activity.isType(ActivityResourceType.SCREEN.name())) {
             // add screen to the historyUrl
-            addScreenToUrl(screen);
+            addScreenToUrl(id);
         }
         onPlaceChange(place);
-    }
-
-    // This gets called only when opening recursively all the screens of a perspective
-    public void register(PlaceRequest place) {
-        // FIXME delete this!, not used
     }
 
     /**
@@ -332,6 +398,7 @@ public class PlaceHistoryHandler {
 
     private List<String> getScreensFromUrl(Boolean open) {
         List result = new ArrayList<>();
+
         if (isNotBlank(addressBarUrl)) {
 
             // FIXME make it robust! this is for controlled testing only
@@ -357,24 +424,22 @@ public class PlaceHistoryHandler {
     }
 
     public void registerClose(Activity activity,
-                              PlaceRequest place) {
-        String id = place.getFullIdentifier();
+                              PlaceRequest place,
+                              boolean isDock) {
+        final String id = isDock ? DOCK_PREFIX.concat(place.getIdentifier())
+                : place.getIdentifier();
 
-//        GWT.log(" ~~ removing token ~~ " + activity.getResourceType().getName() + ":" + place.getFullIdentifier());
-//        if (place.getPath() != null) {
-//            GWT.log("    >>> path: " + place.getPath());
-//        }
         if (activity.isType(ActivityResourceType.SCREEN.name())) {
-            removeScreenFromUrl(id);
-        } else {
-            // suppress CQ warnings
+            final String token = getUrlToken(id);
+
+            removeScreenFromUrl(token);
         }
         // update historyUrl
         onPlaceChange(place);
     }
 
     public void flush() {
-//        GWT.log(" ~~ flushing history line ~~");
+//        GWT.log("~~ flush ~~");
         historyUrl = "";
         addressBarUrl = "";
     }

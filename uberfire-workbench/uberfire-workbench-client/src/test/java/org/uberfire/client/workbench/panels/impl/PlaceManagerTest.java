@@ -22,11 +22,9 @@ import java.util.Collection;
 import java.util.HashSet;
 import javax.enterprise.context.Dependent;
 import javax.enterprise.event.Event;
-import javax.enterprise.inject.Any;
 
 import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.user.client.ui.HasWidgets;
-import com.google.gwtmockito.GwtMockitoTestRunner;
 import org.jboss.errai.common.client.dom.HTMLElement;
 import org.jboss.errai.ioc.client.QualifierUtil;
 import org.jboss.errai.ioc.client.container.IOC;
@@ -38,7 +36,6 @@ import org.mockito.AdditionalAnswers;
 import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.mockito.stubbing.Answer;
@@ -148,6 +145,9 @@ public class PlaceManagerTest {
     public void setup() {
         ((SyncBeanManagerImpl) IOC.getBeanManager()).reset();
 
+        // Matteo
+        when(placeHistoryHandler.getPerspectiveFromUrl(any())).then(AdditionalAnswers.returnsFirstArg());
+
         when(activityManager.getActivities(any(PlaceRequest.class))).thenReturn(singleton(notFoundActivity));
 
         // for now (and this will have to change for UF-61), PathPlaceRequest performs an IOC lookup for ObservablePath in its constructor
@@ -178,7 +178,7 @@ public class PlaceManagerTest {
         when(kansasActivity.onMayClose()).thenReturn(true);
         when(kansasActivity.preferredWidth()).thenReturn(123);
         when(kansasActivity.preferredHeight()).thenReturn(456);
-
+        // Matteo
         when(placeHistoryHandler.getPerspectiveFromUrl(any()))
                 .thenAnswer(i -> i.getArgumentAt(0, PlaceRequest.class));
 
@@ -203,9 +203,6 @@ public class PlaceManagerTest {
                 return null;
             }
         }).when(perspectiveManager).savePerspectiveState(any(Command.class));
-
-        //when(placeHistoryHandler.getPerspectiveFromUrl(any())).then(AdditionalAnswers.returnsFirstArg());
-        when(placeHistoryHandler.getPerspectiveFromUrl(any())).then(AdditionalAnswers.returnsFirstArg());
     }
 
     /**
@@ -248,9 +245,9 @@ public class PlaceManagerTest {
     public void testPlaceManagerGetsInitializedToADefaultPlace() throws Exception {
         placeManager.initPlaceHistoryHandler();
 
-        verify(placeHistoryHandler).register(any(PlaceManager.class),
-                                             any(EventBus.class),
-                                             any(PlaceRequest.class));
+        verify(placeHistoryHandler).registerOpen(any(PlaceManager.class),
+                                                 any(EventBus.class),
+                                                 any(PlaceRequest.class));
     }
 
     @Test
@@ -311,6 +308,7 @@ public class PlaceManagerTest {
         verifyActivityLaunchSideEffects(oz,
                                         ozActivity,
                                         null);
+
     }
 
     @Test
@@ -325,6 +323,8 @@ public class PlaceManagerTest {
         verifyNoActivityLaunchSideEffects(kansas,
                                           kansasActivity);
     }
+
+
 
     @Test
     public void testGoToPartWeAreAlreadyAt() throws Exception {

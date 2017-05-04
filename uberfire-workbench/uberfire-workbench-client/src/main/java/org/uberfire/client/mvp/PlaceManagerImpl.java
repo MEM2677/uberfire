@@ -159,6 +159,8 @@ public class PlaceManagerImpl
 
     @Override
     public void goTo(PlaceRequest place) {
+        GWT.log("~~ entry point ~~");
+
         goTo(place,
              (PanelDefinition) null);
     }
@@ -233,15 +235,20 @@ public class PlaceManagerImpl
         }
     }
 
-    private void goTo(final PlaceRequest place,
+    private void goTo(final PlaceRequest request,
                       final PanelDefinition panel,
                       final Command doWhenFinished) {
-        if (place == null || place.equals(DefaultPlaceRequest.NOWHERE)) {
+        if (request == null || request.equals(DefaultPlaceRequest.NOWHERE)) {
             return;
         }
-        final ResolvedRequest resolved = resolveActivity(place);
 
         // matteo
+        final PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(request);
+
+        final ResolvedRequest resolved = resolveActivity(place);
+
+        /*
+        // matteo -- TEMP --
         if (resolved.getActivity().isType(ActivityResourceType.PERSPECTIVE.name()))
         {
             PerspectiveActivity old = perspectiveManager.getCurrentPerspective();
@@ -252,6 +259,7 @@ public class PlaceManagerImpl
             GWT.log("START: [ " + placeHistoryHandler.getToken() + " ]");
             GWT.log("REQ: [ " + place.getIdentifier() + " ]");
         }
+        */
 
         if (resolved.getActivity() != null) {
             final Activity activity = resolved.getActivity();
@@ -372,9 +380,6 @@ public class PlaceManagerImpl
 
         // matteo get the request stripping the state of the screens
         PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(request);
-
-        System.out.println(">>>> " + request.getIdentifier());
-        System.out.println(">>>> " + place.getIdentifier());
 
         final PlaceRequest resolvedPlaceRequest = resolvePlaceRequest(place);
 

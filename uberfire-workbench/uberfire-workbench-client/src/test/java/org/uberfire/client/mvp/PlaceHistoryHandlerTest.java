@@ -350,7 +350,6 @@ public class PlaceHistoryHandlerTest {
         placeHistoryHandler.registerOpen(screenActivity,
                                          screen4,
                                          false);
-
         assertEquals(expectedUrl,
                      placeHistoryHandler.getHistoryUrl());
     }

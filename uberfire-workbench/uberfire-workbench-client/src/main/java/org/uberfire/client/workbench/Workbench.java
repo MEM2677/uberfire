@@ -195,6 +195,15 @@ public class Workbench {
 
         isStandaloneMode = Window.Location.getParameterMap().containsKey("standalone");
 
+        Window.Location.getParameterMap()
+                .entrySet()
+                .stream()
+                .peek(s -> GWT.log("*** ARG " + s));
+
+        GWT.log("=== QUERY STRING === " + Window.Location.getQueryString());
+        GWT.log("==== ???? " + Window.Location.getHref());
+
+
         for (final Map.Entry<String, List<String>> parameter : Window.Location.getParameterMap().entrySet()) {
             if (parameter.getKey().equals("header")) {
                 headersToKeep.addAll(parameter.getValue());
@@ -213,7 +222,8 @@ public class Workbench {
         addLayoutToRootPanel(layout);
 
         //Lookup PerspectiveProviders and if present launch it to set-up the Workbench
-        if (!isStandaloneMode) {
+        if (!isStandaloneMode
+                && false) {
             final PerspectiveActivity homePerspective = getHomePerspectiveActivity();
             if (homePerspective != null) {
                 appReady.fire(new ApplicationReadyEvent());
@@ -255,6 +265,8 @@ public class Workbench {
 
     // TODO add tests for standalone startup vs. full startup
     private void handleStandaloneMode(final Map<String, List<String>> parameters) {
+        String req = Window.Location.getHref();
+
         if (parameters.containsKey("perspective") && !parameters.get("perspective").isEmpty()) {
             placeManager.goTo(new DefaultPlaceRequest(parameters.get("perspective").get(0)));
         } else if (parameters.containsKey("path") && !parameters.get("path").isEmpty()) {
@@ -271,7 +283,14 @@ public class Workbench {
                                    }
                                }
                            });
+
+        } else if (null != req && req.contains("#")) {
+            GWT.log("=== REDIRECTING TO " + req);
+            placeManager.goTo(new DefaultPlaceRequest("UFWidgets"));
+        } else {
+            // do nothing, but make QA happy
         }
+
     }
 
     /**

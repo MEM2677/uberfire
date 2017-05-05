@@ -17,9 +17,11 @@ package org.uberfire.client.mvp;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.StringJoiner;
 import java.util.logging.Logger;
 import javax.enterprise.context.Dependent;
@@ -51,7 +53,7 @@ public class PlaceHistoryHandler {
     public final static String PERSPECTIVE_SEP = "|";
     public final static String SCREEN_SEP = ",";
     public final static String OTHER_SCREEN_SEP = "$";
-    public final static String NEGATION_PREFIX = "~";
+    public final static String CLOSE_PREFIX = "~";
     public final static String DOCK_PREFIX = "!";
 
     public final static int MAX_NAV_URL_SIZE = 1900;
@@ -117,6 +119,24 @@ public class PlaceHistoryHandler {
         }
     }
 
+//    public void onPlaceRestore(final PlaceRequest placeRequest) {
+//        String screens = placeRequest.getFullIdentifier();
+//        if (isPerspectiveInUrl(placeRequest.getFullIdentifier()))
+//        {
+//            screens = screens.substring(screens.indexOf(PERSPECTIVE_SEP) + 1);
+//        }
+//        GWT.log("----> URL DESIRED " + screens);
+//        if (placeRequest.isUpdateLocationBarAllowed()) {
+//            GWT.log("~~~");
+//            historian.newItem(screens,
+//                              false);
+//        }
+//    }
+
+    public void onPlaceRestore(final String placeRequest) {
+        historian.newItem(placeRequest, true);
+    }
+
     /*
     // Useful for the corner cases  (eg. editor with a screen opened in it)
     private void onWorkbenchPartOnFocus(@Observes PlaceGainFocusEvent event) {
@@ -176,12 +196,9 @@ public class PlaceHistoryHandler {
      * @return
      */
     private String tokenForPlace(final PlaceRequest newPlaceRequest) {
-        StringJoiner sj = new StringJoiner("");
         if (defaultPlaceRequest.equals(newPlaceRequest)) {
             return "";
         }
-
-//        GWT.log("historyUrl -> " + historyUrl);
 
         // length check - temporary
         if (isNotBlank(historyUrl)
@@ -303,7 +320,7 @@ public class PlaceHistoryHandler {
      * @param tag
      */
     private void addScreenToUrl(String tag) {
-        String negatedScreen = NEGATION_PREFIX.concat(tag);
+        String negatedScreen = CLOSE_PREFIX.concat(tag);
 
         if (isNotBlank(tag) && isNotBlank(historyUrl) &&
                 historyUrl.length() + tag.length() >= MAX_NAV_URL_SIZE) {
@@ -378,7 +395,7 @@ public class PlaceHistoryHandler {
                                                    url.indexOf(PERSPECTIVE_SEP));
 //            GWT.log(">>> perspective in the ADDRESS BAR: " + perspectiveName);
 
-            // FIXME CREATE A SMALL FACTORY - THE OBJECT MUST BE OF THE SAME TYPE
+            // FIXME CREATE A SMALL FACTORY - THE OBJECT MUST BE OF THE SAME TYPE || CLONE
             DefaultPlaceRequest copy = new DefaultPlaceRequest(perspectiveName);
 
             // copy arguments
@@ -393,18 +410,17 @@ public class PlaceHistoryHandler {
         return place;
     }
 
-    private List<String> getScreensFromUrl(final String request, final Boolean opened) {
-        List result = new ArrayList<>();
+    private Set<String> getScreensFromUrl(final String request, final Boolean opened) {
+        Set result = new HashSet<>();
 
         if (isNotBlank(request)) {
-
             // FIXME make it robust! this is for controlled testing only
             String url = request.substring(request.indexOf(PERSPECTIVE_SEP) + 1);
             String[] screens = url.split(SCREEN_SEP);
 
             for (String screen : screens) {
-                if (((!opened) && screen.startsWith(NEGATION_PREFIX))
-                        || (opened && !screen.startsWith(NEGATION_PREFIX))) {
+                if (((!opened) && screen.startsWith(CLOSE_PREFIX))
+                        || (opened && !screen.startsWith(CLOSE_PREFIX))) {
                     if (!opened) {
                         result.add(screen.substring(1));
                     }
@@ -417,13 +433,13 @@ public class PlaceHistoryHandler {
         return result;
     }
 
-    public List<String> getClosedScreenFromUrl(final PlaceRequest req) {
+    public Set<String> getClosedScreenFromUrl(final PlaceRequest req) {
         final String url = URL.decode(req.getFullIdentifier());
 
         return getScreensFromUrl(url, false);
     }
 
-    public List<String> getOpenedScreenFromUrl(final PlaceRequest req) {
+    public Set<String> getOpenedScreenFromUrl(final PlaceRequest req) {
         final String url = URL.decode(req.getFullIdentifier());
 
         return getScreensFromUrl(url, true);

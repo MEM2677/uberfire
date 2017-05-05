@@ -32,7 +32,6 @@ import javax.inject.Inject;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Element;
-import com.google.gwt.http.client.URL;
 import com.google.gwt.user.client.ui.HasWidgets;
 import com.google.gwt.user.client.ui.IsWidget;
 import com.google.web.bindery.event.shared.EventBus;
@@ -250,19 +249,15 @@ public class PlaceManagerImpl
 
         final ResolvedRequest resolved = resolveActivity(place);
 
-        /*
-        // matteo -- TEMP --
-        if (resolved.getActivity().isType(ActivityResourceType.PERSPECTIVE.name()))
+        if (!request.getIdentifier().equals(place.getIdentifier()))
         {
-            PerspectiveActivity old = perspectiveManager.getCurrentPerspective();
-
-            if (old != null && null != old.getPlace()) {
-                GWT.log("CURRENT PERSPECTIVE: [ " + old.getPlace().getFullIdentifier() +" ]");
-            }
-            GWT.log("START: [ " + placeHistoryHandler.getToken() + " ]");
-            GWT.log("REQ: [ " + place.getIdentifier() + " ]");
+            GWT.log("DO NOTHING!");
+            return;
         }
-        */
+
+        GWT.log("----> request " + request.getIdentifier());
+        GWT.log("----> place " + place.getIdentifier());
+        GWT.log("----> old perspective " + oldPerspective);
 
         if (resolved.getActivity() != null) {
             final Activity activity = resolved.getActivity();
@@ -294,6 +289,7 @@ public class PlaceManagerImpl
                                     (PopupActivity) activity);
                 doWhenFinished.execute();
             } else if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
+                boolean isPerspectiveChange = !oldPerspective.equals(place.getIdentifier());
 
                 // clean the URL
                 placeHistoryHandler.flush();
@@ -304,8 +300,6 @@ public class PlaceManagerImpl
                                           (PerspectiveActivity) activity,
                                           doWhenFinished);
                 GWT.log("=========== PROCESSING ===========");
-                restoreScreens(oldPerspective, place.getIdentifier(), request);
-                GWT.log("=========== END ===========");
 
                 /*
                  *  track the perspective - this placing is strategic as we know that all the
@@ -316,6 +310,9 @@ public class PlaceManagerImpl
                                                  isDock);
 
                 // matteo in this point perspective is loaded and all default screen are open
+                GWT.log("----> perspective changed: " + isPerspectiveChange);
+//                restoreScreens(request, isPerspectiveChange);
+                GWT.log("=========== END ===========");
             }
 
         } else {
@@ -325,37 +322,49 @@ public class PlaceManagerImpl
         }
     }
 
-    private void restoreScreens(final String oldPerspective,
-                                final String currentPerspective,
-                                final PlaceRequest request) {
+    private void restoreScreens(final PlaceRequest request,
+                                boolean isPerspectiveChange) {
 
         // check whether we have changed perspective
-        List<String> closing = placeHistoryHandler.getClosedScreenFromUrl(request);
+        Set<String> closing = placeHistoryHandler.getClosedScreenFromUrl(request);
 
-        GWT.log(">>> current: " + currentPerspective +" old: " +oldPerspective);
-        if (currentPerspective.equals(oldPerspective))
-        {
-            // must also open screens
-            List<String> opening = placeHistoryHandler.getOpenedScreenFromUrl(request);
-
-            if (!opening.isEmpty())
-            {
-                for (String screen: opening) {
-                    GWT.log(" OPENING SCREEN " + screen);
-                    goTo(new DefaultPlaceRequest(screen));
-                }
-            }
-        }
+//        GWT.log(">>> current: " + currentPerspective +" old: " +oldPerspective);
+//        if (currentPerspective.equals(oldPerspective))
+//        {
+//            // must also open screens
+//            List<String> opening = placeHistoryHandler.getOpenedScreenFromUrl(request);
+//            if (!opening.isEmpty())
+//            {
+//                for (String screen: opening) {
+//                    GWT.log(" OPENING SCREEN " + screen);
+//                    PlaceRequest destination = new DefaultPlaceRequest(screen);
+//                    ResolvedRequest resolvedActivity = resolveActivity(destination);
+//                    // update the address BAR FIXME is there a smarter way to do this?
+//                    placeHistoryHandler.registerOpen(resolvedActivity.getActivity(),
+//                                                     destination, false);
+//                    // open the screen
+//                    goTo(destination);
+//
+//                }
+//            }
+//        }
         // must close screens / docks
         if (!closing.isEmpty())
         {
             for (String screen: closing) {
                 GWT.log(" CLOSING SCREEN " + screen);
+                if (!isPerspectiveChange) {
+                    GWT.log("----> updating URL");
+//                    PlaceRequest destination = new DefaultPlaceRequest(screen);
+//                    ResolvedRequest resolvedActivity = resolveActivity(destination);
+//                    // update the address BAR FIXME is there a smarter way to do this?
+//                    placeHistoryHandler.registerClose(resolvedActivity.getActivity(),
+//                                                      destination,
+//                                                      false);
+                }
                 closePlace(screen);
             }
         }
-
-
     }
 
     private boolean closePlaces(final Collection<PlaceRequest> placeRequests) {

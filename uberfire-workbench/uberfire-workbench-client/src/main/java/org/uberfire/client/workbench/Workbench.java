@@ -20,6 +20,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Event;
@@ -30,6 +31,7 @@ import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.event.logical.shared.ResizeEvent;
 import com.google.gwt.event.logical.shared.ResizeHandler;
+import com.google.gwt.http.client.URL;
 import com.google.gwt.user.client.Command;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.Window.ClosingEvent;
@@ -46,10 +48,12 @@ import org.jboss.errai.security.shared.api.identity.User;
 import org.slf4j.Logger;
 import org.uberfire.backend.vfs.Path;
 import org.uberfire.client.mvp.PerspectiveActivity;
+import org.uberfire.client.mvp.PlaceHistoryHandler;
 import org.uberfire.client.mvp.PlaceManager;
 import org.uberfire.client.resources.WorkbenchResources;
 import org.uberfire.client.workbench.events.ApplicationReadyEvent;
 import org.uberfire.mvp.ParameterizedCommand;
+import org.uberfire.mvp.PlaceRequest;
 import org.uberfire.mvp.impl.DefaultPlaceRequest;
 import org.uberfire.mvp.impl.PathPlaceRequest;
 import org.uberfire.rpc.SessionInfo;
@@ -146,6 +150,8 @@ public class Workbench {
     @Inject
     private Logger logger;
     private SessionInfo sessionInfo = null;
+    @Inject
+    private PlaceHistoryHandler placeHistoryHandler;
 
     /**
      * Requests that the workbench does not attempt to create any UI parts until the given responsible party has
@@ -265,7 +271,7 @@ public class Workbench {
 
     // TODO add tests for standalone startup vs. full startup
     private void handleStandaloneMode(final Map<String, List<String>> parameters) {
-        String req = Window.Location.getHref();
+        String req = URL.decode(Window.Location.getHref());
 
         if (parameters.containsKey("perspective") && !parameters.get("perspective").isEmpty()) {
             placeManager.goTo(new DefaultPlaceRequest(parameters.get("perspective").get(0)));
@@ -285,8 +291,20 @@ public class Workbench {
                            });
 
         } else if (null != req && req.contains("#")) {
-            GWT.log("=== REDIRECTING TO " + req);
-            placeManager.goTo(new DefaultPlaceRequest(req.substring(req.indexOf('#') + 1)));
+            GWT.log("=== REQUEST " + req);
+            req = req.substring(req.indexOf('#') + 1);
+            GWT.log("=== RESTORING " + req);
+            final PlaceRequest restore = new DefaultPlaceRequest(req);
+            final PlaceRequest perspective = placeHistoryHandler.getPerspectiveFromUrl(restore);
+            // perspective first
+            placeManager.goTo(perspective);
+            // close screens
+            Set<String> views = placeHistoryHandler.getClosedScreenFromUrl(restore);
+            List<String> screens = views.stream()
+                    .filter(v -> !v.startsWith(placeHistoryHandler.DOCK_PREFIX))
+                    .collect(Collectors.toList());
+            // close screen
+            views.forEach(s -> placeManager.closePlace(new DefaultPlaceRequest(s)));
         } else {
             // do nothing, but make QA happy
         }

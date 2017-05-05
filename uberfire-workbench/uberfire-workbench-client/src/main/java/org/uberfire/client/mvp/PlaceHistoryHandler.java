@@ -28,6 +28,7 @@ import javax.inject.Inject;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.http.client.URL;
 import com.google.gwt.user.client.History;
 import com.google.web.bindery.event.shared.EventBus;
 import com.google.web.bindery.event.shared.HandlerRegistration;
@@ -46,8 +47,6 @@ public class PlaceHistoryHandler {
     private PlaceRequest defaultPlaceRequest = PlaceRequest.NOWHERE;
     /* This is the 'state' string that will be shown in the address bar */
     private String historyUrl = "";
-    /* this should be an incoming request from the browser */
-    private String addressBarUrl = "";
 
     public final static String PERSPECTIVE_SEP = "|";
     public final static String SCREEN_SEP = ",";
@@ -148,7 +147,7 @@ public class PlaceHistoryHandler {
      * Visible for testing.
      */
     public String getAddressBarUrl() {
-        return addressBarUrl;
+        return "";
     }
 
     private void handleHistoryToken(String token) {
@@ -346,8 +345,7 @@ public class PlaceHistoryHandler {
     public void registerOpen(Activity activity,
                              PlaceRequest place,
                              boolean isDock) {
-        String id = isDock ? DOCK_PREFIX.concat(place.getFullIdentifier())
-                : place.getFullIdentifier();
+        String id = place.getFullIdentifier();
 
 //        GWT.log(" ~~ adding token ~~ " + activity.getResourceType().getName() + ":" + id + " docks " + historyUrl.toString());
 //        if (place.getPath() != null) {
@@ -355,14 +353,13 @@ public class PlaceHistoryHandler {
 //        }
 
         if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
-            if (!isPerspectiveInUrl(addressBarUrl)) {
+            if (!isPerspectiveInUrl()) {
                 historyUrl = id.concat(PERSPECTIVE_SEP).concat(historyUrl);
-            } else {
-                if (!isNotBlank(historyUrl)) {
-                    historyUrl = addressBarUrl;
-                }
             }
         } else if (activity.isType(ActivityResourceType.SCREEN.name())) {
+            // add the dock marker if needed
+            id = isDock ? DOCK_PREFIX.concat(place.getFullIdentifier())
+                    : place.getFullIdentifier();
             // add screen to the historyUrl
             addScreenToUrl(id);
         }
@@ -375,10 +372,10 @@ public class PlaceHistoryHandler {
      * @return
      */
     public PlaceRequest getPerspectiveFromUrl(PlaceRequest place) {
-        addressBarUrl = place.getFullIdentifier();
-        if (isPerspectiveInUrl(addressBarUrl)) {
-            String perspectiveName = addressBarUrl.substring(0,
-                                                             addressBarUrl.indexOf(PERSPECTIVE_SEP));
+        String url = URL.decode(place.getFullIdentifier());
+        if (isPerspectiveInUrl(url)) {
+            String perspectiveName = url.substring(0,
+                                                   url.indexOf(PERSPECTIVE_SEP));
 //            GWT.log(">>> perspective in the ADDRESS BAR: " + perspectiveName);
 
             // FIXME CREATE A SMALL FACTORY - THE OBJECT MUST BE OF THE SAME TYPE
@@ -396,31 +393,40 @@ public class PlaceHistoryHandler {
         return place;
     }
 
-    private List<String> getScreensFromUrl(Boolean open) {
+    private List<String> getScreensFromUrl(final String request, final Boolean opened) {
         List result = new ArrayList<>();
 
-        if (isNotBlank(addressBarUrl)) {
+        if (isNotBlank(request)) {
 
             // FIXME make it robust! this is for controlled testing only
-            String url = addressBarUrl.substring(addressBarUrl.indexOf(PERSPECTIVE_SEP));
+            String url = request.substring(request.indexOf(PERSPECTIVE_SEP) + 1);
             String[] screens = url.split(SCREEN_SEP);
 
             for (String screen : screens) {
-                if (((!open) && screen.startsWith(NEGATION_PREFIX))
-                        || (open && !screen.startsWith(NEGATION_PREFIX))) {
-                    result.add(screen.substring(1));
+                if (((!opened) && screen.startsWith(NEGATION_PREFIX))
+                        || (opened && !screen.startsWith(NEGATION_PREFIX))) {
+                    if (!opened) {
+                        result.add(screen.substring(1));
+                    }
+                    else {
+                        result.add(screen);
+                    }
                 }
             }
         }
         return result;
     }
 
-    public List<String> getClosedScreenFromUrl() {
-        return getScreensFromUrl(false);
+    public List<String> getClosedScreenFromUrl(final PlaceRequest req) {
+        final String url = URL.decode(req.getFullIdentifier());
+
+        return getScreensFromUrl(url, false);
     }
 
-    public List<String> getOpenedScreenFromUrl() {
-        return getScreensFromUrl(true);
+    public List<String> getOpenedScreenFromUrl(final PlaceRequest req) {
+        final String url = URL.decode(req.getFullIdentifier());
+
+        return getScreensFromUrl(url, true);
     }
 
     public void registerClose(Activity activity,
@@ -441,7 +447,6 @@ public class PlaceHistoryHandler {
     public void flush() {
 //        GWT.log("~~ flush ~~");
         historyUrl = "";
-        addressBarUrl = "";
     }
 
     public String getToken() {

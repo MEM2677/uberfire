@@ -286,7 +286,7 @@ public class Workbench {
 
         } else if (null != req && req.contains("#")) {
             GWT.log("=== REDIRECTING TO " + req);
-            placeManager.goTo(new DefaultPlaceRequest("UFWidgets"));
+            placeManager.goTo(new DefaultPlaceRequest(req.substring(req.indexOf('#') + 1)));
         } else {
             // do nothing, but make QA happy
         }

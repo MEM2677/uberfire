@@ -32,6 +32,7 @@ import javax.inject.Inject;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Element;
+import com.google.gwt.http.client.URL;
 import com.google.gwt.user.client.ui.HasWidgets;
 import com.google.gwt.user.client.ui.IsWidget;
 import com.google.web.bindery.event.shared.EventBus;
@@ -159,7 +160,6 @@ public class PlaceManagerImpl
 
     @Override
     public void goTo(PlaceRequest place) {
-        GWT.log("~~ entry point ~~");
 
         goTo(place,
              (PanelDefinition) null);
@@ -241,6 +241,9 @@ public class PlaceManagerImpl
         if (request == null || request.equals(DefaultPlaceRequest.NOWHERE)) {
             return;
         }
+        final Activity currentActivity = perspectiveManager.getCurrentPerspective();
+        final String oldPerspective = null != currentActivity?
+                currentActivity.getPlace().getIdentifier() : "";
 
         // matteo
         final PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(request);
@@ -301,16 +304,7 @@ public class PlaceManagerImpl
                                           (PerspectiveActivity) activity,
                                           doWhenFinished);
                 GWT.log("=========== PROCESSING ===========");
-                // matteo EXPERIMENTAL closing of the screens in real time as the
-                // content of the address bar changes
-                List<String> closing = placeHistoryHandler.getClosedScreenFromUrl();
-                if (!closing.isEmpty())
-                {
-                    for (String screen: closing) {
-                        GWT.log(" CLOSING SCREEN " + screen.substring(1));
-                        closePlace(screen);
-                    }
-                }
+                restoreScreens(oldPerspective, place.getIdentifier(), request);
                 GWT.log("=========== END ===========");
 
                 /*
@@ -329,6 +323,39 @@ public class PlaceManagerImpl
                  panel,
                  doWhenFinished);
         }
+    }
+
+    private void restoreScreens(final String oldPerspective,
+                                final String currentPerspective,
+                                final PlaceRequest request) {
+
+        // check whether we have changed perspective
+        List<String> closing = placeHistoryHandler.getClosedScreenFromUrl(request);
+
+        GWT.log(">>> current: " + currentPerspective +" old: " +oldPerspective);
+        if (currentPerspective.equals(oldPerspective))
+        {
+            // must also open screens
+            List<String> opening = placeHistoryHandler.getOpenedScreenFromUrl(request);
+
+            if (!opening.isEmpty())
+            {
+                for (String screen: opening) {
+                    GWT.log(" OPENING SCREEN " + screen);
+                    goTo(new DefaultPlaceRequest(screen));
+                }
+            }
+        }
+        // must close screens / docks
+        if (!closing.isEmpty())
+        {
+            for (String screen: closing) {
+                GWT.log(" CLOSING SCREEN " + screen);
+                closePlace(screen);
+            }
+        }
+
+
     }
 
     private boolean closePlaces(final Collection<PlaceRequest> placeRequests) {
@@ -376,10 +403,7 @@ public class PlaceManagerImpl
      * TODO (UF-94) : make this simpler. with enough tests in place, we should experiment with doing the recursive
      * lookup automatically.
      */
-    private ResolvedRequest resolveActivity(final PlaceRequest request) {
-
-        // matteo get the request stripping the state of the screens
-        PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(request);
+    private ResolvedRequest resolveActivity(final PlaceRequest place) {
 
         final PlaceRequest resolvedPlaceRequest = resolvePlaceRequest(place);
 

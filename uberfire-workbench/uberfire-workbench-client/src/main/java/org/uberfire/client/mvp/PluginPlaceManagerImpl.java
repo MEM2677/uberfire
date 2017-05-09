@@ -232,4 +232,9 @@ public class PluginPlaceManagerImpl implements PlaceManager {
         fail();
         return null;
     }
+
+    @Override
+    public void restoreScreens(String screenName) {
+        fail();
+    }
 }

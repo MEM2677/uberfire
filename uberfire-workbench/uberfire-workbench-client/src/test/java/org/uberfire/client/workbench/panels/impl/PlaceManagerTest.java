@@ -59,6 +59,7 @@ import org.uberfire.client.util.MockIOCBeanDef;
 import org.uberfire.client.workbench.LayoutSelection;
 import org.uberfire.client.workbench.PanelManager;
 import org.uberfire.client.workbench.WorkbenchLayout;
+import org.uberfire.client.workbench.docks.UberfireDocks;
 import org.uberfire.client.workbench.events.BeforeClosePlaceEvent;
 import org.uberfire.client.workbench.events.ClosePlaceEvent;
 import org.uberfire.client.workbench.events.NewSplashScreenActiveEvent;
@@ -110,7 +111,10 @@ public class PlaceManagerTest {
             MultiListWorkbenchPanelPresenter.class.getName());
 
     // Matteo
-//    private final PlaceHistoryHandler placeHistoryHandler = mock(PlaceHistoryHandler.class);
+    @Mock
+    PerspectiveActivity defaultPerspective;
+    @Mock
+    UberfireDocks uberfireDock;
 
     @Mock
     Event<BeforeClosePlaceEvent> workbenchPartBeforeCloseEvent;
@@ -147,6 +151,20 @@ public class PlaceManagerTest {
 
         // Matteo
         when(placeHistoryHandler.getPerspectiveFromUrl(any())).then(AdditionalAnswers.returnsFirstArg());
+
+        when(defaultPerspective.getIdentifier())
+                .thenReturn("DefaultPerspective");
+        when(defaultPerspective.isType(any(String.class)))
+                .thenReturn(true);
+        when(perspectiveManager.getCurrentPerspective())
+                .thenReturn(defaultPerspective);
+
+
+        when(uberfireDock.isScreenDockedInPerspective(any(String.class),
+                                                      any(String.class)))
+                .thenReturn(false);
+
+
 
         when(activityManager.getActivities(any(PlaceRequest.class))).thenReturn(singleton(notFoundActivity));
 
@@ -195,6 +213,7 @@ public class PlaceManagerTest {
         }).when(perspectiveManager).switchToPerspective(any(PlaceRequest.class),
                                                         any(PerspectiveActivity.class),
                                                         any(ParameterizedCommand.class));
+
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock invocation) throws Throwable {
@@ -203,6 +222,12 @@ public class PlaceManagerTest {
                 return null;
             }
         }).when(perspectiveManager).savePerspectiveState(any(Command.class));
+
+        // Matteo
+        doReturn(new DefaultPlaceRequest("lastPlaceRequest"))
+                .when(defaultPerspective).getPlace();
+        doReturn(defaultPerspective).when(perspectiveManager)
+                .getCurrentPerspective();
     }
 
     /**
@@ -1109,6 +1134,7 @@ public class PlaceManagerTest {
     public void testCloseAllPlacesOrNothingSucceeds() throws Exception {
         PlaceRequest emeraldCityPlace = new DefaultPlaceRequest("emerald_city");
         WorkbenchScreenActivity emeraldCityActivity = createWorkbenchScreenActivity(emeraldCityPlace);
+
         placeManager.goTo(emeraldCityPlace);
 
         when(kansasActivity.onMayClose()).thenReturn(true);
@@ -1125,11 +1151,10 @@ public class PlaceManagerTest {
     @Test
     public void testCloseAllPlacesOrNothingFails() throws Exception {
 
-        //  matteo
-
         PlaceRequest emeraldCityPlace = new DefaultPlaceRequest("emerald_city");
         WorkbenchScreenActivity emeraldCityActivity = createWorkbenchScreenActivity(emeraldCityPlace);
         doReturn(false).when(emeraldCityActivity).onMayClose();
+
         placeManager.goTo(emeraldCityPlace);
 
         when(kansasActivity.onMayClose()).thenReturn(true);

@@ -48,6 +48,7 @@ import org.uberfire.client.mvp.ActivityLifecycleError.LifecyclePhase;
 import org.uberfire.client.workbench.LayoutSelection;
 import org.uberfire.client.workbench.PanelManager;
 import org.uberfire.client.workbench.WorkbenchLayout;
+import org.uberfire.client.workbench.docks.UberfireDock;
 import org.uberfire.client.workbench.docks.UberfireDocks;
 import org.uberfire.client.workbench.events.BeforeClosePlaceEvent;
 import org.uberfire.client.workbench.events.ClosePlaceEvent;
@@ -241,23 +242,16 @@ public class PlaceManagerImpl
             return;
         }
         final Activity currentActivity = perspectiveManager.getCurrentPerspective();
-        final String oldPerspective = null != currentActivity?
-                currentActivity.getPlace().getIdentifier() : "";
 
         // matteo
         final PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(request);
 
         final ResolvedRequest resolved = resolveActivity(place);
 
-        if (!request.getIdentifier().equals(place.getIdentifier()))
-        {
+        if (!request.getIdentifier().equals(place.getIdentifier())) {
             GWT.log("DO NOTHING!");
             return;
         }
-
-        GWT.log("----> request " + request.getIdentifier());
-        GWT.log("----> place " + place.getIdentifier());
-        GWT.log("----> old perspective " + oldPerspective);
 
         if (resolved.getActivity() != null) {
             final Activity activity = resolved.getActivity();
@@ -289,7 +283,6 @@ public class PlaceManagerImpl
                                     (PopupActivity) activity);
                 doWhenFinished.execute();
             } else if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
-                boolean isPerspectiveChange = !oldPerspective.equals(place.getIdentifier());
 
                 // clean the URL
                 placeHistoryHandler.flush();
@@ -305,16 +298,15 @@ public class PlaceManagerImpl
                  *  track the perspective - this placing is strategic as we know that all the
                  *  screens previously opened belong to the current perspective
                  */
-                boolean isDock = isScreenDocked(activity, place);
-                placeHistoryHandler.registerOpen(activity, place,
+                boolean isDock = isScreenDocked(activity,
+                                                place);
+                placeHistoryHandler.registerOpen(activity,
+                                                 place,
                                                  isDock);
 
                 // matteo in this point perspective is loaded and all default screen are open
-                GWT.log("----> perspective changed: " + isPerspectiveChange);
-//                restoreScreens(request, isPerspectiveChange);
                 GWT.log("=========== END ===========");
             }
-
         } else {
             goTo(resolved.getPlaceRequest(),
                  panel,
@@ -322,47 +314,58 @@ public class PlaceManagerImpl
         }
     }
 
-    private void restoreScreens(final PlaceRequest request,
-                                boolean isPerspectiveChange) {
-
-        // check whether we have changed perspective
-        Set<String> closing = placeHistoryHandler.getClosedScreenFromUrl(request);
-
-//        GWT.log(">>> current: " + currentPerspective +" old: " +oldPerspective);
-//        if (currentPerspective.equals(oldPerspective))
-//        {
-//            // must also open screens
-//            List<String> opening = placeHistoryHandler.getOpenedScreenFromUrl(request);
-//            if (!opening.isEmpty())
-//            {
-//                for (String screen: opening) {
-//                    GWT.log(" OPENING SCREEN " + screen);
-//                    PlaceRequest destination = new DefaultPlaceRequest(screen);
-//                    ResolvedRequest resolvedActivity = resolveActivity(destination);
-//                    // update the address BAR FIXME is there a smarter way to do this?
-//                    placeHistoryHandler.registerOpen(resolvedActivity.getActivity(),
-//                                                     destination, false);
-//                    // open the screen
-//                    goTo(destination);
-//
-//                }
-//            }
-//        }
-        // must close screens / docks
-        if (!closing.isEmpty())
+    /**
+     * Restore the screen as taken from the URL
+     * @param screenName
+     */
+    public void restoreScreens(final String screenName) {
+        if (null == screenName
+                || 0 == screenName.trim().length())
         {
-            for (String screen: closing) {
-                GWT.log(" CLOSING SCREEN " + screen);
-                if (!isPerspectiveChange) {
-                    GWT.log("----> updating URL");
-//                    PlaceRequest destination = new DefaultPlaceRequest(screen);
-//                    ResolvedRequest resolvedActivity = resolveActivity(destination);
-//                    // update the address BAR FIXME is there a smarter way to do this?
-//                    placeHistoryHandler.registerClose(resolvedActivity.getActivity(),
-//                                                      destination,
-//                                                      false);
+            return;
+        }
+
+        final boolean isCloseOperation = screenName.startsWith(placeHistoryHandler.CLOSE_PREFIX);
+        final String screenElement = isCloseOperation ? screenName.substring(1) : screenName;
+        final boolean isDockedScreen = screenElement.startsWith(placeHistoryHandler.DOCK_PREFIX);
+        final String screenId = isDockedScreen ? screenElement.substring(1) : screenElement;
+
+        if (isDockedScreen)
+        {
+            toggleDock(screenId, !isCloseOperation);
+        }
+        else
+        {
+            if (isCloseOperation) {
+                closePlace(screenId);
+            }
+            else
+            {
+                goTo(screenId);
+            }
+        }
+    }
+
+    /**
+     * Expand or collapse (hide) the desired dock in the current perspective
+     * @param dockName
+     * @param open
+     */
+    private void toggleDock(final String dockName, final boolean open)
+    {
+        final Activity currentActivity = perspectiveManager.getCurrentPerspective();
+
+        if (null != currentActivity
+                && null != currentActivity.getIdentifier()) {
+            String perspectiveName = currentActivity.getIdentifier();
+            UberfireDock dock = uberfireDocks.getDockedScreenInPerspective(perspectiveName,
+                                                                           dockName);
+            if (null != dock) {
+                if (open) {
+                    uberfireDocks.expand(dock);
+                } else {
+                    uberfireDocks.collapse(dock);
                 }
-                closePlace(screen);
             }
         }
     }
@@ -807,7 +810,8 @@ public class PlaceManagerImpl
 
         // added by matteo
 //        GWT.log(">> " + activity.getResourceType().getName()); // Matteo
-        boolean isDock = isScreenDocked(activity, place);
+        boolean isDock = isScreenDocked(activity,
+                                        place);
         getPlaceHistoryHandler().registerOpen(activity,
                                               place,
                                               isDock);
@@ -865,7 +869,8 @@ public class PlaceManagerImpl
 
         getPlaceHistoryHandler().onPlaceChange(place);
         // modified by Matteo
-        boolean isDock = isScreenDocked(activity, place);
+        boolean isDock = isScreenDocked(activity,
+                                        place);
         getPlaceHistoryHandler().registerOpen(activity,
                                               place,
                                               isDock);
@@ -1051,7 +1056,8 @@ public class PlaceManagerImpl
         }
 
         // modified by Matteo
-        boolean isDock = isScreenDocked(activity, place);
+        boolean isDock = isScreenDocked(activity,
+                                        place);
         getPlaceHistoryHandler().registerClose(activity,
                                                place,
                                                isDock);
@@ -1077,20 +1083,31 @@ public class PlaceManagerImpl
 
     /**
      * Check whether the current screen is docked
+     * @param screenName
+     * @return
+     */
+    private boolean isScreenDocked(String screenName)
+    {
+        Activity currentActivity = perspectiveManager.getCurrentPerspective();
+        String perspectiveName = currentActivity.getIdentifier();
+        boolean isDocked =
+                uberfireDocks.isScreenDockedInPerspective(perspectiveName,
+                                                          screenName);
+        return isDocked;
+    }
+
+
+    /**
+     * Check whether the current screen is docked
      * @param place
      * @return
      */
-    private boolean isScreenDocked(Activity activity, PlaceRequest place)
-    {
+    private boolean isScreenDocked(Activity activity,
+                                   PlaceRequest place) {
         boolean isDocked = false;
 
-        Activity currentActivity = perspectiveManager.getCurrentPerspective();
         if (activity.isType(ActivityResourceType.SCREEN.name())) {
-            String perspectiveName = currentActivity.getIdentifier();
-            String screenName = place.getIdentifier();
-
-            isDocked =
-                    uberfireDocks.isScreenDockedInPerspective(perspectiveName, screenName);
+            isDocked = isScreenDocked(place.getIdentifier());
         }
         return isDocked;
     }

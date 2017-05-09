@@ -201,20 +201,24 @@ public class Workbench {
 
         isStandaloneMode = Window.Location.getParameterMap().containsKey("standalone");
 
-        Window.Location.getParameterMap()
-                .entrySet()
-                .stream()
-                .peek(s -> GWT.log("*** ARG " + s));
-
-        GWT.log("=== QUERY STRING === " + Window.Location.getQueryString());
-        GWT.log("==== ???? " + Window.Location.getHref());
-
-
         for (final Map.Entry<String, List<String>> parameter : Window.Location.getParameterMap().entrySet()) {
             if (parameter.getKey().equals("header")) {
                 headersToKeep.addAll(parameter.getValue());
             }
         }
+    }
+
+    /**
+     * Check whether the current address is an addressable URl as defined in UF-195.
+     * Basically we check if the URL contains a PERSPECTIVE_SEPARATOR (a special character
+     * defined in placeHistoryHandler
+     * @return
+     */
+    private boolean isAddressableUrl()
+    {
+        String req = Window.Location.getHref();
+        return (null != req && URL.decode(req)
+                .contains(placeHistoryHandler.PERSPECTIVE_SEP));
     }
 
     private void bootstrap() {
@@ -229,7 +233,7 @@ public class Workbench {
 
         //Lookup PerspectiveProviders and if present launch it to set-up the Workbench
         if (!isStandaloneMode
-                && false) {
+                && !isAddressableUrl()) {
             final PerspectiveActivity homePerspective = getHomePerspectiveActivity();
             if (homePerspective != null) {
                 appReady.fire(new ApplicationReadyEvent());
@@ -290,7 +294,7 @@ public class Workbench {
                                }
                            });
 
-        } else if (null != req && req.contains("#")) {
+        } else if (isAddressableUrl()) {
             GWT.log("=== REQUEST " + req);
             req = req.substring(req.indexOf('#') + 1);
             GWT.log("=== RESTORING " + req);
@@ -299,12 +303,20 @@ public class Workbench {
             // perspective first
             placeManager.goTo(perspective);
             // close screens
-            Set<String> views = placeHistoryHandler.getClosedScreenFromUrl(restore);
-            List<String> screens = views.stream()
+            Set<String> closedViews = placeHistoryHandler.getClosedScreenFromUrl(restore);
+            Set<String> openViews = placeHistoryHandler.getOpenedScreenFromUrl(restore);
+
+            openViews.forEach(s -> GWT.log("element: " + s));
+
+            List<String> screens = closedViews.stream()
                     .filter(v -> !v.startsWith(placeHistoryHandler.DOCK_PREFIX))
                     .collect(Collectors.toList());
+            List<String> docks = openViews.stream()
+                    .filter(v -> v.startsWith(placeHistoryHandler.DOCK_PREFIX))
+                    .collect(Collectors.toList());
             // close screen
-            views.forEach(s -> placeManager.closePlace(new DefaultPlaceRequest(s)));
+            screens.forEach(s -> placeManager.closePlace(new DefaultPlaceRequest(s)));
+            docks.forEach(s -> placeManager.restoreScreens(s));
         } else {
             // do nothing, but make QA happy
         }

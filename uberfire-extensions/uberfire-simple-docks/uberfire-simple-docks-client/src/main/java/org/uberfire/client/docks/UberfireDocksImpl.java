@@ -71,21 +71,39 @@ public class UberfireDocksImpl implements UberfireDocks {
     }
 
     @Override
-    public boolean isScreenDockedInPerspective(String perspective, String screen)
+    public boolean isScreenDockedInPerspective(String perspective,
+                                               String screen)
     {
         UberfireDock res = null;
-        List<UberfireDock> docks = docksPerPerspective.get("UFWidgets");
+        List<UberfireDock> docks = docksPerPerspective.get(perspective);
 
         if (null != docks
                 && !docks.isEmpty())
         {
             res = docks.stream()
-//                    .peek(s -> System.out.println("-> " + s + "/" + screen))
                     .filter(s -> s.getPlaceRequest().getIdentifier().equals(screen))
                     .findFirst()
                     .orElse(null);
         }
         return (res != null);
+    }
+
+    @Override
+    public UberfireDock getDockedScreenInPerspective(String perspective,
+                                                     String screen)
+    {
+        UberfireDock res = null;
+        List<UberfireDock> docks = docksPerPerspective.get(perspective);
+
+        if (null != docks
+                && !docks.isEmpty())
+        {
+            res = docks.stream()
+                    .filter(s -> s.getPlaceRequest().getIdentifier().equals(screen))
+                    .findFirst()
+                    .orElse(null);
+        }
+        return (res);
     }
 
     @Override
@@ -131,6 +149,13 @@ public class UberfireDocksImpl implements UberfireDocks {
     public void expand(UberfireDock dock) {
         if (docksBars.isReady()) {
             docksBars.expand(dock);
+        }
+    }
+
+    @Override
+    public void collapse(UberfireDock dock) {
+        if (docksBars.isReady()) {
+            docksBars.clearAndCollapse(dock.getDockPosition());
         }
     }
 

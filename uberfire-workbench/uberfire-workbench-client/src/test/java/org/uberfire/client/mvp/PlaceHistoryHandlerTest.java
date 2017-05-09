@@ -1,5 +1,8 @@
 package org.uberfire.client.mvp;
 
+import java.util.Map;
+import javax.annotation.OverridingMethodsMustInvokeSuper;
+
 import com.google.gwtmockito.GwtMockitoTestRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -10,12 +13,8 @@ import org.uberfire.mvp.PlaceRequest;
 import org.uberfire.mvp.impl.DefaultPlaceRequest;
 import org.uberfire.workbench.model.ActivityResourceType;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Created by matteo on 28/04/17.
@@ -35,6 +34,7 @@ public class PlaceHistoryHandlerTest {
 
     @Before
     public void setup() {
+
         when(screenActivity.isDynamic()).thenReturn(false);
         when(screenActivity.isType(ActivityResourceType.SCREEN.name())).thenReturn(true);
         when(screenActivity.onMayClose()).thenReturn(true);
@@ -61,11 +61,53 @@ public class PlaceHistoryHandlerTest {
                    req);
     }
 
+
     @Test
     public void testPerspectiveFromUrlWithHistory() {
-        PlaceRequest req = new DefaultPlaceRequest("perspective|secreenOne,~screenTwo$screenThree");
+        final String REQUEST = "perspective|secreenOne,~screenTwo$screenThree";
+
+        PlaceRequest req = new DefaultPlaceRequest(REQUEST);
 
         PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(req);
+        assertNotNull(place);
+        assertEquals("perspective",
+                     place.getIdentifier());
+        assertNotSame(place,
+                      req);
+    }
+
+
+    @Test
+    public void testPerspectiveFromUrlWithHistoryExt() {
+        // FIXME this smells a lot
+        class HistoryWrapper extends PlaceHistoryHandler
+        {
+            @Override
+            public PlaceRequest getPerspectiveFromUrl(PlaceRequest place) {
+                String url = place.getFullIdentifier();
+
+                String perspectiveName = url.substring(0,
+                                                       url.indexOf(PERSPECTIVE_SEP));
+
+                DefaultPlaceRequest copy = new DefaultPlaceRequest(perspectiveName);
+
+                // copy arguments
+                if (!place.getParameters().isEmpty()) {
+                    for (Map.Entry<String, String> elem : place.getParameters().entrySet()) {
+                        copy.addParameter(elem.getKey(),
+                                          elem.getValue());
+                    }
+                }
+                return copy;
+            }
+        }
+
+        HistoryWrapper wrapper = spy(new HistoryWrapper());
+        final String REQUEST = "perspective|secreenOne,~screenTwo$screenThree";
+
+        PlaceRequest req = new DefaultPlaceRequest(REQUEST);
+
+        PlaceRequest place = wrapper.getPerspectiveFromUrl(req);
         assertNotNull(place);
         assertEquals("perspective",
                      place.getIdentifier());
@@ -162,7 +204,10 @@ public class PlaceHistoryHandlerTest {
         final String PAR2_KEY = "a";
         final String PAR2_VALUE = "b";
         final String PARAM_TAIL =
-                getParamListForTest(PAR2_KEY, PAR2_VALUE, PAR1_KEY, PAR1_VALUE);
+                getParamListForTest(PAR2_KEY,
+                                    PAR2_VALUE,
+                                    PAR1_KEY,
+                                    PAR1_VALUE);
 
         screen1.addParameter(PAR1_KEY,
                              PAR1_VALUE);
@@ -297,31 +342,63 @@ public class PlaceHistoryHandlerTest {
         final PlaceRequest screen3 = new DefaultPlaceRequest(SCREEN3_ID);
         final PlaceRequest perspective = new DefaultPlaceRequest(PERSPECTIVE_ID);
 
-
-        placeHistoryHandler.registerOpen(screenActivity, screen1,
+        placeHistoryHandler.registerOpen(screenActivity,
+                                         screen1,
                                          true);
-        placeHistoryHandler.registerOpen(screenActivity, screen2,
+        placeHistoryHandler.registerOpen(screenActivity,
+                                         screen2,
                                          false);
-        placeHistoryHandler.registerOpen(perspectiveActivity, perspective,
+        placeHistoryHandler.registerOpen(perspectiveActivity,
+                                         perspective,
                                          false);
-        placeHistoryHandler.registerOpen(screenActivity, screen3,
+        placeHistoryHandler.registerOpen(screenActivity,
+                                         screen3,
                                          true);
 
         String EXPECTED_URL =
                 "perspective|!screen1,screen2$!screen3";
-        assertEquals(EXPECTED_URL, placeHistoryHandler.getHistoryUrl());
+        assertEquals(EXPECTED_URL,
+                     placeHistoryHandler.getHistoryUrl());
 
-        placeHistoryHandler.registerClose(screenActivity, screen1,
+        placeHistoryHandler.registerClose(screenActivity,
+                                          screen1,
                                           true);
         EXPECTED_URL =
                 "perspective|~!screen1,screen2$!screen3";
-        assertEquals(EXPECTED_URL, placeHistoryHandler.getHistoryUrl());
+        assertEquals(EXPECTED_URL,
+                     placeHistoryHandler.getHistoryUrl());
 
-        placeHistoryHandler.registerClose(screenActivity, screen3,
+        placeHistoryHandler.registerClose(screenActivity,
+                                          screen3,
                                           false);
         EXPECTED_URL =
                 "perspective|~!screen1,screen2";
-        assertEquals(EXPECTED_URL, placeHistoryHandler.getHistoryUrl());
+        assertEquals(EXPECTED_URL,
+                     placeHistoryHandler.getHistoryUrl());
+    }
+
+    @Test
+    public void testUrlLimit() {
+        int cnt = 0;
+        int length = 0;
+
+        do {
+            final PlaceRequest screen = new DefaultPlaceRequest("screen".concat(String.valueOf(cnt++)));
+
+            placeHistoryHandler.registerOpen(screenActivity,
+                                             screen,
+                                             false);
+
+            if (length == placeHistoryHandler.getHistoryUrl().length())
+            {
+                break;
+            }
+            length = placeHistoryHandler.getHistoryUrl().length();
+        } while ((placeHistoryHandler.getHistoryUrl().length()
+                < placeHistoryHandler.MAX_NAV_URL_SIZE + 100));
+        assertNotNull(placeHistoryHandler.getHistoryUrl());
+        assertFalse(placeHistoryHandler.getHistoryUrl().length()
+                            > placeHistoryHandler.MAX_NAV_URL_SIZE);
     }
 
     /**
@@ -367,12 +444,15 @@ public class PlaceHistoryHandlerTest {
         final String PAR_KEY = "y";
         final String PAR_VALUE = "x";
         final String PARAM_TAIL =
-                getParamListForTest(PAR_KEY, PAR_VALUE);
+                getParamListForTest(PAR_KEY,
+                                    PAR_VALUE);
         final String expectedUrl = "perspective|screen1,screen2$screen3"
                 + PARAM_TAIL + ",screen4" + PARAM_TAIL;
 
-        screen3.addParameter(PAR_KEY, PAR_VALUE);
-        screen4.addParameter(PAR_KEY, PAR_VALUE);
+        screen3.addParameter(PAR_KEY,
+                             PAR_VALUE);
+        screen4.addParameter(PAR_KEY,
+                             PAR_VALUE);
 
         placeHistoryHandler.registerOpen(screenActivity,
                                          screen1,
@@ -402,24 +482,17 @@ public class PlaceHistoryHandlerTest {
         boolean isQM = true;
         StringBuilder param = new StringBuilder();
 
-        for (int i = 0; i < txt.length; i++)
-        {
+        for (int i = 0; i < txt.length; i++) {
             if ((i == 0)
-                    || (i % 2 == 0))
-            {
-                if (isQM)
-                {
+                    || (i % 2 == 0)) {
+                if (isQM) {
                     param.append("?");
                     isQM = false;
-                }
-                else
-                {
+                } else {
                     param.append("&");
                 }
                 param.append(txt[i]);
-            }
-            else
-            {
+            } else {
                 param.append("=");
                 param.append(txt[i]);
             }

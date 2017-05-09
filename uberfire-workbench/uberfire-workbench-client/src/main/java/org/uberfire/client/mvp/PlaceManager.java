@@ -171,4 +171,7 @@ public interface PlaceManager {
      */
     @JsIgnore
     Collection<PathPlaceRequest> getActivitiesForResourceType(final ResourceTypeDefinition type);
+
+
+    void restoreScreens(final String screenName);
 }

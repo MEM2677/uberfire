@@ -244,13 +244,19 @@ public class PlaceManagerImpl
         final Activity currentActivity = perspectiveManager.getCurrentPerspective();
 
         // matteo
-        final PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(request);
-
+        final PlaceRequest place = placeHistoryHandler.getPerspectiveFromPlace(request);
         final ResolvedRequest resolved = resolveActivity(place);
 
-        if (!request.getIdentifier().equals(place.getIdentifier())) {
-            GWT.log("DO NOTHING!");
-            return;
+        if (null != currentActivity
+                && null != currentActivity.getPlace()) {
+//            GWT.log("request: " + request.getFullIdentifier());
+//            GWT.log("place: " + place.getFullIdentifier());
+//            GWT.log("current activity: " + currentActivity.getPlace().getFullIdentifier());
+
+            if (currentActivity.getPlace().getFullIdentifier().equals(place.getIdentifier())) {
+                // do nothing if the perspective is the same
+                return;
+            }
         }
 
         if (resolved.getActivity() != null) {
@@ -288,11 +294,9 @@ public class PlaceManagerImpl
                 placeHistoryHandler.flush();
 
                 // Matteo we are about to switch to a perspective
-                GWT.log("=========== START ===========");
                 launchPerspectiveActivity(place,
                                           (PerspectiveActivity) activity,
                                           doWhenFinished);
-                GWT.log("=========== PROCESSING ===========");
 
                 /*
                  *  track the perspective - this placing is strategic as we know that all the
@@ -305,7 +309,6 @@ public class PlaceManagerImpl
                                                  isDock);
 
                 // matteo in this point perspective is loaded and all default screen are open
-                GWT.log("=========== END ===========");
             }
         } else {
             goTo(resolved.getPlaceRequest(),
@@ -325,10 +328,15 @@ public class PlaceManagerImpl
             return;
         }
 
-        final boolean isCloseOperation = screenName.startsWith(placeHistoryHandler.CLOSE_PREFIX);
+        final boolean isCloseOperation = screenName.startsWith(placeHistoryHandler.CLOSED_PREFIX);
         final String screenElement = isCloseOperation ? screenName.substring(1) : screenName;
         final boolean isDockedScreen = screenElement.startsWith(placeHistoryHandler.DOCK_PREFIX);
         final String screenId = isDockedScreen ? screenElement.substring(1) : screenElement;
+
+//        GWT.log("processing screen: " + screenName);
+//        GWT.log("isCloseOperation: " + isCloseOperation);
+//        GWT.log("isDockedScreen: " + isDockedScreen);
+//        GWT.log("screenId: " + screenId);
 
         if (isDockedScreen)
         {
@@ -900,7 +908,7 @@ public class PlaceManagerImpl
                                            final Command doWhenFinished) {
 
         // process the URL to extract the perspective definition
-        final PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(request);
+        final PlaceRequest place = placeHistoryHandler.getPerspectiveFromPlace(request);
 
         checkNotNull("doWhenFinished",
                      doWhenFinished);

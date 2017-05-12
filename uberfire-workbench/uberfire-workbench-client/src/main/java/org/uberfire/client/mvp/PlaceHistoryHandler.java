@@ -15,22 +15,19 @@
  */
 package org.uberfire.client.mvp;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.StringJoiner;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import javax.enterprise.context.Dependent;
 import javax.inject.Inject;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
-import com.google.gwt.http.client.URL;
 import com.google.gwt.user.client.History;
 import com.google.web.bindery.event.shared.EventBus;
 import com.google.web.bindery.event.shared.HandlerRegistration;
@@ -48,12 +45,12 @@ public class PlaceHistoryHandler {
     private PlaceManager placeManager;
     private PlaceRequest defaultPlaceRequest = PlaceRequest.NOWHERE;
     /* This is the 'state' string that will be shown in the address bar */
-    private String historyUrl = "";
+    private String bookmarkableUrl = "";
 
     public final static String PERSPECTIVE_SEP = "|";
     public final static String SCREEN_SEP = ",";
     public final static String OTHER_SCREEN_SEP = "$";
-    public final static String CLOSE_PREFIX = "~";
+    public final static String CLOSED_PREFIX = "~";
     public final static String DOCK_PREFIX = "!";
 
     public final static int MAX_NAV_URL_SIZE = 1900;
@@ -119,26 +116,16 @@ public class PlaceHistoryHandler {
         }
     }
 
-    /**
-     * Visible for testing.
-     */
+
     Logger log() {
         return log;
     }
 
-    /**
-     * Visible for testing.
-     */
-    public String getHistoryUrl() {
-        return historyUrl;
+
+    public String getBookmarkableUrl() {
+        return bookmarkableUrl;
     }
 
-    /**
-     * Visible for testing.
-     */
-    public String getAddressBarUrl() {
-        return "";
-    }
 
     private void handleHistoryToken(String token) {
 
@@ -161,7 +148,7 @@ public class PlaceHistoryHandler {
     }
 
     /**
-     * historyUrl schema   perspective#screen-1,screen-2#editor-path1,editor-path2
+     * bookmarkableUrl schema   perspective#screen-1,screen-2#editor-path1,editor-path2
      * @param newPlaceRequest
      * @return
      */
@@ -169,27 +156,7 @@ public class PlaceHistoryHandler {
         if (defaultPlaceRequest.equals(newPlaceRequest)) {
             return "";
         }
-
-        // length check - temporary
-        if (isNotBlank(historyUrl)
-                && historyUrl.length() >= MAX_NAV_URL_SIZE) {
-            int idx = historyUrl.lastIndexOf(SCREEN_SEP);
-
-            GWT.log("truncating URL history for safety reasons");
-            while (historyUrl.length() >= MAX_NAV_URL_SIZE && idx > 0) {
-                idx = historyUrl.lastIndexOf(SCREEN_SEP);
-                if (idx != -1) {
-                    historyUrl = historyUrl.substring(0,
-                                                      idx);
-                }
-            }
-            // paranoid check
-            while (historyUrl.length() >= MAX_NAV_URL_SIZE) {
-                historyUrl = historyUrl.substring(0,
-                                                  MAX_NAV_URL_SIZE);
-            }
-        }
-        return historyUrl;
+        return bookmarkableUrl;
     }
 
     /**
@@ -197,8 +164,13 @@ public class PlaceHistoryHandler {
      * @param str
      * @return
      */
-    private boolean isNotBlank(String str) {
+    private boolean isNotBlank(final String str) {
         return (null != str && !"".equals(str.trim()));
+    }
+
+    private boolean isNotBlank(final PlaceRequest place)
+    {
+        return (null != place && isNotBlank(place.getFullIdentifier()));
     }
 
     /**
@@ -209,12 +181,21 @@ public class PlaceHistoryHandler {
         return (isNotBlank(url) && (url.indexOf(PERSPECTIVE_SEP) > 0));
     }
 
-    private boolean isOtherScreenInUrl(String url) {
-        return (isNotBlank(url) && (url.indexOf(OTHER_SCREEN_SEP) > 0));
-    }
+//    private boolean isOtherScreenInUrl(String url) {
+//        return (isNotBlank(url) && (url.indexOf(OTHER_SCREEN_SEP) > 0));
+//    }
 
     private boolean isPerspectiveInUrl() { // FIXME don't think this method overload is really needed
-        return isPerspectiveInUrl(historyUrl);
+        return isPerspectiveInUrl(bookmarkableUrl);
+    }
+
+    /**
+     * Check if the URL contains screens not belonging to the current perspective
+     * @return
+     */
+    private boolean urlContainsExtraPerspectiveScreen()
+    {
+        return (bookmarkableUrl.indexOf(OTHER_SCREEN_SEP) != -1);
     }
 
     /**
@@ -222,9 +203,10 @@ public class PlaceHistoryHandler {
      * @param screen
      * @return
      */
-    private boolean isPerspectiveScreen(String screen) {
-        return (isNotBlank(screen) && ((-1 == historyUrl.indexOf(OTHER_SCREEN_SEP))
-                || (historyUrl.indexOf(OTHER_SCREEN_SEP) > historyUrl.indexOf(screen))));
+    private boolean isPerspectiveScreen(final String screen) {
+        return (isNotBlank(screen)
+                && (!urlContainsExtraPerspectiveScreen()
+                    || (bookmarkableUrl.indexOf(OTHER_SCREEN_SEP) > bookmarkableUrl.indexOf(screen))));
     }
 
     /**
@@ -233,12 +215,12 @@ public class PlaceHistoryHandler {
      * @param screen
      * @return
      */
-    private String getUrlToken(String screen) {
-        int st = isPerspectiveInUrl() ? (historyUrl.indexOf(PERSPECTIVE_SEP) + 1) : 0;
-        String screensList = historyUrl.replace(OTHER_SCREEN_SEP,
-                                                SCREEN_SEP)
+    private String getUrlToken(final String screen) {
+        int st = isPerspectiveInUrl() ? (bookmarkableUrl.indexOf(PERSPECTIVE_SEP) + 1) : 0;
+        String screensList = bookmarkableUrl.replace(OTHER_SCREEN_SEP,
+                                                     SCREEN_SEP)
                 .substring(st,
-                           historyUrl.length());
+                           bookmarkableUrl.length());
 
         String tokens[] = screensList.split(SCREEN_SEP);
         Optional<String> token = Arrays.asList(tokens).stream()
@@ -249,76 +231,94 @@ public class PlaceHistoryHandler {
     }
 
     /**
-     * Handle URL - delete a closed screen
-     * @param tag
+     * Return true if the given screen is already closed.
+     * @param screen
+     * @return
      */
-    private void removeScreenFromUrl(String tag) {
-        final boolean isPerspective = isPerspectiveScreen(tag);
-        final String sep = isPerspective ? PERSPECTIVE_SEP : OTHER_SCREEN_SEP;
-        final String negation = "~".concat(tag);
-        final String first = sep.concat(tag); // |screen or $screen
-        final String firstComma = first.concat(SCREEN_SEP); // |screen, or $screen,
-        final String comma = tag.concat(SCREEN_SEP); // screen,
+    private boolean isScreenClosed(String screen)
+    {
+        if (!screen.startsWith(CLOSED_PREFIX))
+        {
+            screen = CLOSED_PREFIX.concat(screen);
+        }
+        return (bookmarkableUrl.indexOf(screen) != -1);
+    }
+
+    /**
+     * Handle URL - delete a closed screen
+     * @param screenName
+     */
+    private void markScreenClosedInUrl(final String screenName) {
+        final boolean isPerspective = isPerspectiveScreen(screenName);
+        final String separator = isPerspective ? PERSPECTIVE_SEP : OTHER_SCREEN_SEP;
+        final String closedScreen = CLOSED_PREFIX.concat(screenName);
+        final String uniqueScreenAfterDelimiter =
+                separator.concat(screenName); // |screen or $screen
+        final String firstScreenAfterDelimiter =
+                uniqueScreenAfterDelimiter.concat(SCREEN_SEP); // |screen, or $screen,
+        final String commaSeparatedScreen =
+                screenName.concat(SCREEN_SEP); // screen,
 
         // check screen already closed
-        if (historyUrl.indexOf(negation) != -1) {
+        if (isScreenClosed(closedScreen)) {
             return;
         }
         if (isPerspective) {
-            historyUrl = historyUrl.replace(tag,
-                                            negation);
+            bookmarkableUrl = bookmarkableUrl.replace(screenName,
+                                                      closedScreen);
         } else {
             // check for SEP + screen + ","
-            if (historyUrl.contains(firstComma)) {
-                historyUrl = historyUrl.replace(firstComma,
-                                                sep);
-            } else if (historyUrl.contains(first)) {
-                historyUrl = historyUrl.replace(first,
-                                                "");
-            } else if (historyUrl.contains(comma)) {
-                historyUrl = historyUrl.replace(comma,
-                                                "");
+            if (bookmarkableUrl.contains(firstScreenAfterDelimiter)) {
+                bookmarkableUrl = bookmarkableUrl.replace(firstScreenAfterDelimiter,
+                                                          separator);
+            } else if (bookmarkableUrl.contains(uniqueScreenAfterDelimiter)) {
+                bookmarkableUrl = bookmarkableUrl.replace(uniqueScreenAfterDelimiter,
+                                                          "");
+            } else if (bookmarkableUrl.contains(commaSeparatedScreen)) {
+                bookmarkableUrl = bookmarkableUrl.replace(commaSeparatedScreen,
+                                                          "");
             } else {
-                historyUrl = historyUrl.replace(tag,
-                                                "");
+                bookmarkableUrl = bookmarkableUrl.replace(screenName,
+                                                          "");
             }
         }
     }
 
     /**
      * Handle URL - add a newly opened screen
-     * @param tag
+     * @param screenName
      */
-    private void addScreenToUrl(String tag) {
-        String negatedScreen = CLOSE_PREFIX.concat(tag);
+    private void markScreenOpenInUrl(String screenName) {
+        String closedScreen = CLOSED_PREFIX.concat(screenName);
 
-        if (isNotBlank(tag) && isNotBlank(historyUrl) &&
-                historyUrl.length() + tag.length() >= MAX_NAV_URL_SIZE) {
-            GWT.log("ignoring screen '" + tag + "' to avoid a lengthy URL");
+        // if the length exceeds the max allowed size do nothing
+        if (isNotBlank(screenName) && isNotBlank(bookmarkableUrl) &&
+                bookmarkableUrl.length() + screenName.length() >= MAX_NAV_URL_SIZE) {
             return;
         }
 
-        if (historyUrl.indexOf(negatedScreen) != -1) {
-            historyUrl = historyUrl.replace(negatedScreen,
-                                            tag);
-        } else if (historyUrl.indexOf(tag) > 0) {
-            // do nothing the screen is already present
+        // if the screen was closed
+        if (bookmarkableUrl.indexOf(closedScreen) != -1) {
+            bookmarkableUrl = bookmarkableUrl.replace(closedScreen,
+                                                      screenName);
+        } else if (bookmarkableUrl.indexOf(screenName) > 0) {
+            // do nothing coz the screen is already present
         } else if (!isPerspectiveInUrl()) {
             // must add the screen in the group of the current perspective (which is not yet loaded)
-            if (isNotBlank(historyUrl)) {
-                historyUrl = historyUrl.concat(SCREEN_SEP).concat(tag);
+            if (isNotBlank(bookmarkableUrl)) {
+                bookmarkableUrl = bookmarkableUrl.concat(SCREEN_SEP).concat(screenName);
             } else {
-                historyUrl = tag;
+                bookmarkableUrl = screenName;
             }
         } else {
             // this is a screen outside the current perspective
-            if (historyUrl.indexOf(OTHER_SCREEN_SEP) == -1) {
+            if (!urlContainsExtraPerspectiveScreen()) {
                 // add the '$' if needed
-                historyUrl = historyUrl.concat(OTHER_SCREEN_SEP).concat(tag);
+                bookmarkableUrl = bookmarkableUrl.concat(OTHER_SCREEN_SEP).concat(screenName);
             }
             // otherwise append the screen after the last element
             else {
-                historyUrl = historyUrl.concat(SCREEN_SEP).concat(tag);
+                bookmarkableUrl = bookmarkableUrl.concat(SCREEN_SEP).concat(screenName);
             }
         }
     }
@@ -334,21 +334,21 @@ public class PlaceHistoryHandler {
                              boolean isDock) {
         String id = place.getFullIdentifier();
 
-//        GWT.log(" ~~ adding token ~~ " + activity.getResourceType().getName() + ":" + id + " docks " + historyUrl.toString());
+//        GWT.log(" ~~ adding token ~~ " + activity.getResourceType().getName() + ":" + id + " docks " + bookmarkableUrl.toString());
 //        if (place.getPath() != null) {
 //            GWT.log("    >>> path: " + place.getPath());
 //        }
 
         if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
             if (!isPerspectiveInUrl()) {
-                historyUrl = id.concat(PERSPECTIVE_SEP).concat(historyUrl);
+                bookmarkableUrl = id.concat(PERSPECTIVE_SEP).concat(bookmarkableUrl);
             }
         } else if (activity.isType(ActivityResourceType.SCREEN.name())) {
             // add the dock marker if needed
             id = isDock ? DOCK_PREFIX.concat(place.getFullIdentifier())
                     : place.getFullIdentifier();
-            // add screen to the historyUrl
-            addScreenToUrl(id);
+            // add screen to the bookmarkableUrl
+            markScreenOpenInUrl(id);
         }
         onPlaceChange(place);
     }
@@ -358,17 +358,14 @@ public class PlaceHistoryHandler {
      * @param place\
      * @return
      */
-    public PlaceRequest getPerspectiveFromUrl(PlaceRequest place) {
+    public PlaceRequest getPerspectiveFromPlace(PlaceRequest place) {
         String url = place.getFullIdentifier();
 
         if (isPerspectiveInUrl(url)) {
             String perspectiveName = url.substring(0,
                                                    url.indexOf(PERSPECTIVE_SEP));
-//            GWT.log(">>> perspective in the ADDRESS BAR: " + perspectiveName);
-
-            // FIXME CREATE A SMALL FACTORY - THE OBJECT MUST BE OF THE SAME TYPE || CLONE
-            DefaultPlaceRequest copy = new DefaultPlaceRequest(perspectiveName);
-
+            PlaceRequest copy = place.clone();
+            copy.setIdentifier(perspectiveName);
             // copy arguments
             if (!place.getParameters().isEmpty()) {
                 for (Map.Entry<String, String> elem : place.getParameters().entrySet()) {
@@ -381,59 +378,79 @@ public class PlaceHistoryHandler {
         return place;
     }
 
-    private Set<String> getScreensFromUrl(final String request, final Boolean opened) {
-        Set result = new HashSet<>();
+    /**
+     * Return all the screens (opened or closed) that is, everything
+     * after the perspective declaration
+     * @param place
+     * @return
+     */
+    public Set<String> getScreensFromPlace(final PlaceRequest place) {
+        String url;
 
-        if (isNotBlank(request)) {
-            // FIXME make it robust! this is for controlled testing only
-            String url = request.substring(request.indexOf(PERSPECTIVE_SEP) + 1);
-            String[] screens = url.replace(OTHER_SCREEN_SEP, SCREEN_SEP).split(SCREEN_SEP);
-
-            for (String screen : screens) {
-                if (((!opened) && screen.startsWith(CLOSE_PREFIX))
-                        || (opened && !screen.startsWith(CLOSE_PREFIX))) {
-                    if (!opened) {
-                        result.add(screen.substring(1));
-                    }
-                    else {
-                        result.add(screen);
-                    }
-                }
-            }
+        if (!isNotBlank(place)) {
+            return new HashSet<String>();
         }
+        // get everything after the perspective
+        if (isPerspectiveInUrl(place.getFullIdentifier())) {
+            String request = place.getFullIdentifier();
+
+            url = request.substring(request.indexOf(PERSPECTIVE_SEP) + 1);
+        }
+        else {
+            url = place.getFullIdentifier();
+        }
+        // replace the '$' with a comma ','
+        url = url.replace(OTHER_SCREEN_SEP, SCREEN_SEP);
+        String[] token = url.split(SCREEN_SEP);
+        return new HashSet<>(Arrays.asList(token));
+    }
+
+    /**
+     * Get the opened screens in the given place request
+     * @param place
+     * @return
+     */
+    public Set<String> getClosedScreenFromPlace(final PlaceRequest place) {
+        Set<String> screens = getScreensFromPlace(place);
+        Set<String> result = screens.stream()
+                .filter(s -> s.startsWith(CLOSED_PREFIX))
+                .collect(Collectors.toSet());
         return result;
     }
 
-    public Set<String> getClosedScreenFromUrl(final PlaceRequest req) {
-        final String url = req.getFullIdentifier();
-
-        return getScreensFromUrl(url, false);
-    }
-
-    public Set<String> getOpenedScreenFromUrl(final PlaceRequest req) {
-        final String url = req.getFullIdentifier();
-
-        return getScreensFromUrl(url, true);
+    /**
+     * Get the opened screens in the given place request
+     * @param place
+     * @return
+     */
+    public Set<String> getOpenedScreenFromPlace(final PlaceRequest place) {
+        Set<String> screens = getScreensFromPlace(place);
+        Set<String> result = screens.stream()
+                .filter(s -> !s.startsWith(CLOSED_PREFIX))
+                .collect(Collectors.toSet());
+        return result;
     }
 
     public void registerClose(Activity activity,
                               PlaceRequest place,
                               boolean isDock) {
+
+        GWT.log("~~ close: " + place.getIdentifier());
+
         final String id = isDock ? DOCK_PREFIX.concat(place.getIdentifier())
                 : place.getIdentifier();
 
         if (activity.isType(ActivityResourceType.SCREEN.name())) {
             final String token = getUrlToken(id);
 
-            removeScreenFromUrl(token);
+            markScreenClosedInUrl(token);
         }
-        // update historyUrl
+        // update bookmarkableUrl
         onPlaceChange(place);
     }
 
     public void flush() {
-//        GWT.log("~~ flush ~~");
-        historyUrl = "";
+        bookmarkableUrl = "";
     }
 
     public String getToken() {

@@ -299,14 +299,14 @@ public class Workbench {
             req = req.substring(req.indexOf('#') + 1);
             GWT.log("=== RESTORING " + req);
             final PlaceRequest restore = new DefaultPlaceRequest(req);
-            final PlaceRequest perspective = placeHistoryHandler.getPerspectiveFromUrl(restore);
+            final PlaceRequest perspective = placeHistoryHandler.getPerspectiveFromPlace(restore);
             // perspective first
             placeManager.goTo(perspective);
+            /*
             // close screens
-            Set<String> closedViews = placeHistoryHandler.getClosedScreenFromUrl(restore);
-            Set<String> openViews = placeHistoryHandler.getOpenedScreenFromUrl(restore);
+            Set<String> closedViews = placeHistoryHandler.getClosedScreenFromPlace(restore);
+            Set<String> openViews = placeHistoryHandler.getOpenedScreenFromPlace(restore);
 
-            openViews.forEach(s -> GWT.log("element: " + s));
 
             List<String> screens = closedViews.stream()
                     .filter(v -> !v.startsWith(placeHistoryHandler.DOCK_PREFIX))
@@ -315,10 +315,15 @@ public class Workbench {
                     .filter(v -> v.startsWith(placeHistoryHandler.DOCK_PREFIX))
                     .collect(Collectors.toList());
             // close screen
-            screens.forEach(s -> placeManager.closePlace(new DefaultPlaceRequest(s)));
+            screens.forEach(s -> placeManager.restoreScreens(s));
             docks.forEach(s -> placeManager.restoreScreens(s));
+            */
+
+            Set<String> screens = placeHistoryHandler.getScreensFromPlace(restore);
+            screens.forEach(s -> placeManager.restoreScreens(s));
+
         } else {
-            // do nothing, but make QA happy
+            // do nothing
         }
 
     }

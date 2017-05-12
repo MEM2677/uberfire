@@ -74,18 +74,7 @@ public class UberfireDocksImpl implements UberfireDocks {
     public boolean isScreenDockedInPerspective(String perspective,
                                                String screen)
     {
-        UberfireDock res = null;
-        List<UberfireDock> docks = docksPerPerspective.get(perspective);
-
-        if (null != docks
-                && !docks.isEmpty())
-        {
-            res = docks.stream()
-                    .filter(s -> s.getPlaceRequest().getIdentifier().equals(screen))
-                    .findFirst()
-                    .orElse(null);
-        }
-        return (res != null);
+        return (getDockedScreenInPerspective(perspective, screen) != null);
     }
 
     @Override

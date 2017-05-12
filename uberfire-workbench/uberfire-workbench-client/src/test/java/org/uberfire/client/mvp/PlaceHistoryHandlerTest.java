@@ -1,7 +1,6 @@
 package org.uberfire.client.mvp;
 
-import java.util.Map;
-import javax.annotation.OverridingMethodsMustInvokeSuper;
+import java.util.Set;
 
 import com.google.gwtmockito.GwtMockitoTestRunner;
 import org.junit.Before;
@@ -53,7 +52,7 @@ public class PlaceHistoryHandlerTest {
     public void testPerspectiveFromUrlSimple() {
         PlaceRequest req = new DefaultPlaceRequest("perspective");
 
-        PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(req);
+        PlaceRequest place = placeHistoryHandler.getPerspectiveFromPlace(req);
         assertNotNull(place);
         assertEquals("perspective",
                      place.getIdentifier());
@@ -61,53 +60,13 @@ public class PlaceHistoryHandlerTest {
                    req);
     }
 
-
     @Test
     public void testPerspectiveFromUrlWithHistory() {
         final String REQUEST = "perspective|secreenOne,~screenTwo$screenThree";
 
         PlaceRequest req = new DefaultPlaceRequest(REQUEST);
 
-        PlaceRequest place = placeHistoryHandler.getPerspectiveFromUrl(req);
-        assertNotNull(place);
-        assertEquals("perspective",
-                     place.getIdentifier());
-        assertNotSame(place,
-                      req);
-    }
-
-
-    @Test
-    public void testPerspectiveFromUrlWithHistoryExt() {
-        // FIXME this smells a lot
-        class HistoryWrapper extends PlaceHistoryHandler
-        {
-            @Override
-            public PlaceRequest getPerspectiveFromUrl(PlaceRequest place) {
-                String url = place.getFullIdentifier();
-
-                String perspectiveName = url.substring(0,
-                                                       url.indexOf(PERSPECTIVE_SEP));
-
-                DefaultPlaceRequest copy = new DefaultPlaceRequest(perspectiveName);
-
-                // copy arguments
-                if (!place.getParameters().isEmpty()) {
-                    for (Map.Entry<String, String> elem : place.getParameters().entrySet()) {
-                        copy.addParameter(elem.getKey(),
-                                          elem.getValue());
-                    }
-                }
-                return copy;
-            }
-        }
-
-        HistoryWrapper wrapper = spy(new HistoryWrapper());
-        final String REQUEST = "perspective|secreenOne,~screenTwo$screenThree";
-
-        PlaceRequest req = new DefaultPlaceRequest(REQUEST);
-
-        PlaceRequest place = wrapper.getPerspectiveFromUrl(req);
+        PlaceRequest place = placeHistoryHandler.getPerspectiveFromPlace(req);
         assertNotNull(place);
         assertEquals("perspective",
                      place.getIdentifier());
@@ -124,7 +83,7 @@ public class PlaceHistoryHandlerTest {
                                          req,
                                          false);
         assertEquals(REQUEST,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
     }
 
     @Test
@@ -140,21 +99,21 @@ public class PlaceHistoryHandlerTest {
                                          screen1,
                                          false);
         assertEquals(SCREEN1_ID,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
 
         final String SCREENS_OPEN_LIST = SCREEN1_ID.concat(",").concat(SCREEN2_ID);
         placeHistoryHandler.registerOpen(screenActivity,
                                          screen2,
                                          false);
         assertEquals(SCREENS_OPEN_LIST,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
 
         final String PERSPECTIVE_STRING = PERSPECTIVE_ID.concat("|").concat(SCREENS_OPEN_LIST);
         placeHistoryHandler.registerOpen(perspectiveActivity,
                                          perspective,
                                          false);
         assertEquals(PERSPECTIVE_STRING,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
     }
 
     @Test
@@ -168,28 +127,28 @@ public class PlaceHistoryHandlerTest {
                                          screen1,
                                          false);
         assertEquals(SCREEN1_ID,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
 
         final String CLOSED_SCREENS = "~".concat(SCREEN1_ID);
         placeHistoryHandler.registerClose(screenActivity,
                                           screen1,
                                           false);
         assertEquals(CLOSED_SCREENS,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
 
         String URL = "~".concat(SCREEN1_ID).concat(",").concat(SCREEN2_ID);
         placeHistoryHandler.registerOpen(screenActivity,
                                          screen2,
                                          false);
         assertEquals(URL,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
 
         URL = "~".concat(SCREEN1_ID).concat(",~").concat(SCREEN2_ID);
         placeHistoryHandler.registerClose(screenActivity,
                                           screen2,
                                           false);
         assertEquals(URL,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
     }
 
     @Test
@@ -217,7 +176,7 @@ public class PlaceHistoryHandlerTest {
                                          screen1,
                                          false);
         assertEquals(SCREEN1_ID.concat(PARAM_TAIL),
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
 
         final String CLOSED_SCREENS = "~".concat(SCREEN1_ID)
                 .concat(PARAM_TAIL);
@@ -225,7 +184,7 @@ public class PlaceHistoryHandlerTest {
                                           screen1,
                                           false);
         assertEquals(CLOSED_SCREENS,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
 
         String URL = "~".concat(SCREEN1_ID)
                 .concat(PARAM_TAIL)
@@ -234,7 +193,7 @@ public class PlaceHistoryHandlerTest {
                                          screen2,
                                          false);
         assertEquals(URL,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
 
         URL = "~".concat(SCREEN1_ID)
                 .concat(PARAM_TAIL)
@@ -243,7 +202,7 @@ public class PlaceHistoryHandlerTest {
                                           screen2,
                                           false);
         assertEquals(URL,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
     }
 
     @Test
@@ -261,28 +220,28 @@ public class PlaceHistoryHandlerTest {
                                          screen1,
                                          false);
         assertEquals(SCREEN1_ID,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
 
         final String PERSPECTIVE_STRING = PERSPECTIVE_ID.concat("|").concat(SCREEN1_ID);
         placeHistoryHandler.registerOpen(perspectiveActivity,
                                          perspective,
                                          false);
         assertEquals(PERSPECTIVE_STRING,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
 
         String EXPECTED_URL = PERSPECTIVE_STRING.concat("$").concat(SCREEN2_ID);
         placeHistoryHandler.registerOpen(screenActivity,
                                          screen2,
                                          false);
         assertEquals(EXPECTED_URL,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
 
         EXPECTED_URL = EXPECTED_URL.concat(",").concat(SCREEN3_ID);
         placeHistoryHandler.registerOpen(screenActivity,
                                          screen3,
                                          false);
         assertEquals(EXPECTED_URL,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
     }
 
     @Test
@@ -300,39 +259,37 @@ public class PlaceHistoryHandlerTest {
                                           screen2,
                                           false);
         assertEquals(EXPECTED_URL,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
 
         EXPECTED_URL = "perspective|screen1,~screen2$screen4?y=x";
         placeHistoryHandler.registerClose(screenActivity,
                                           screen3,
                                           false);
         assertEquals(EXPECTED_URL,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
 
         EXPECTED_URL = "perspective|screen1,~screen2";
         placeHistoryHandler.registerClose(screenActivity,
                                           screen4,
                                           false);
         assertEquals(EXPECTED_URL,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
 
         EXPECTED_URL = "perspective|~screen1,~screen2";
         placeHistoryHandler.registerClose(screenActivity,
                                           screen1,
                                           false);
         assertEquals(EXPECTED_URL,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
     }
 
     @Test
     public void TestFlush() {
         prepareCompleteUrlForTests();
         placeHistoryHandler.flush();
-        assertNotNull(placeHistoryHandler.getHistoryUrl());
+        assertNotNull(placeHistoryHandler.getBookmarkableUrl());
         assertEquals("",
-                     placeHistoryHandler.getHistoryUrl());
-        assertEquals("",
-                     placeHistoryHandler.getAddressBarUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
     }
 
     @Test
@@ -358,7 +315,7 @@ public class PlaceHistoryHandlerTest {
         String EXPECTED_URL =
                 "perspective|!screen1,screen2$!screen3";
         assertEquals(EXPECTED_URL,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
 
         placeHistoryHandler.registerClose(screenActivity,
                                           screen1,
@@ -366,7 +323,7 @@ public class PlaceHistoryHandlerTest {
         EXPECTED_URL =
                 "perspective|~!screen1,screen2$!screen3";
         assertEquals(EXPECTED_URL,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
 
         placeHistoryHandler.registerClose(screenActivity,
                                           screen3,
@@ -374,7 +331,7 @@ public class PlaceHistoryHandlerTest {
         EXPECTED_URL =
                 "perspective|~!screen1,screen2";
         assertEquals(EXPECTED_URL,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
     }
 
     @Test
@@ -389,16 +346,41 @@ public class PlaceHistoryHandlerTest {
                                              screen,
                                              false);
 
-            if (length == placeHistoryHandler.getHistoryUrl().length())
-            {
+            if (length == placeHistoryHandler.getBookmarkableUrl().length()) {
                 break;
             }
-            length = placeHistoryHandler.getHistoryUrl().length();
-        } while ((placeHistoryHandler.getHistoryUrl().length()
+            length = placeHistoryHandler.getBookmarkableUrl().length();
+        } while ((placeHistoryHandler.getBookmarkableUrl().length()
                 < placeHistoryHandler.MAX_NAV_URL_SIZE + 100));
-        assertNotNull(placeHistoryHandler.getHistoryUrl());
-        assertFalse(placeHistoryHandler.getHistoryUrl().length()
+        assertNotNull(placeHistoryHandler.getBookmarkableUrl());
+        assertFalse(placeHistoryHandler.getBookmarkableUrl().length()
                             > placeHistoryHandler.MAX_NAV_URL_SIZE);
+    }
+
+    @Test
+    public void testGetOpenScreens() {
+        final String url = "perspective|screen1,!screen2,~screen3$!screen4";
+        final PlaceRequest req = new DefaultPlaceRequest(url);
+
+        Set<String> opened = placeHistoryHandler.getOpenedScreenFromPlace(req);
+        assertNotNull(opened);
+        assertEquals(3L, opened.size());
+        assertTrue(opened.contains(SCREEN1_ID));
+        assertTrue(opened.contains("!" + SCREEN2_ID));
+        assertTrue(opened.contains("!" + SCREEN4_ID));
+    }
+
+    @Test
+    public void testGetClosedScreens() {
+        final String url = "perspective|screen1,~!screen2,~screen3$~!screen4";
+        final PlaceRequest req = new DefaultPlaceRequest(url);
+
+        Set<String> closed = placeHistoryHandler.getClosedScreenFromPlace(req);
+        assertNotNull(closed);
+        assertEquals(3L, closed.size());
+        assertTrue(closed.contains("~" + SCREEN3_ID));
+        assertTrue(closed.contains("~!" + SCREEN2_ID));
+        assertTrue(closed.contains("~!" + SCREEN4_ID));
     }
 
     /**
@@ -428,7 +410,7 @@ public class PlaceHistoryHandlerTest {
                                          screen4,
                                          false);
         assertEquals(expectedUrl,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
     }
 
     /**
@@ -470,7 +452,7 @@ public class PlaceHistoryHandlerTest {
                                          screen4,
                                          false);
         assertEquals(expectedUrl,
-                     placeHistoryHandler.getHistoryUrl());
+                     placeHistoryHandler.getBookmarkableUrl());
     }
 
     /**

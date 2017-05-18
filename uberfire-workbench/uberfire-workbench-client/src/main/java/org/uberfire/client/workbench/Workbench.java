@@ -295,17 +295,17 @@ public class Workbench {
                            });
 
         } else if (isAddressableUrl()) {
-            GWT.log("=== REQUEST " + req);
+//            GWT.log("=== REQUEST " + req);
             req = req.substring(req.indexOf('#') + 1);
-            GWT.log("=== RESTORING " + req);
+//            GWT.log("=== RESTORING " + req);
             final PlaceRequest restore = new DefaultPlaceRequest(req);
-            final PlaceRequest perspective = placeHistoryHandler.getPerspectiveFromPlace(restore);
+            final PlaceRequest perspective =
+                    placeHistoryHandler.getPerspectiveFromPlace(restore);
             // perspective first
             placeManager.goTo(perspective);
 
             Set<String> screens = BookmarkableUrlHelper.getScreensFromPlace(restore);
-            screens.forEach(s -> placeManager.restoreScreens(s));
-
+//            screens.forEach(s -> placeManager.restoreScreens(s));
         } else {
             // do nothing
         }

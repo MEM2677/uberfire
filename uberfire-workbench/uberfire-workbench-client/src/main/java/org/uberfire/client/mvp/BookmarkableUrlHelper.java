@@ -2,6 +2,7 @@ package org.uberfire.client.mvp;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -127,6 +128,31 @@ public class BookmarkableUrlHelper {
         return bookmarkableUrl;
     }
 
+    /**
+     * Given a bookmarkable URL this methods returns a PlaceRequest
+     * with the perspective
+     * @param place\
+     * @return
+     */
+    public static PlaceRequest getPerspectiveFromPlace(PlaceRequest place) {
+        String url = place.getFullIdentifier();
+
+        if (isPerspectiveInUrl(url)) {
+            String perspectiveName = url.substring(0,
+                                                   url.indexOf(PERSPECTIVE_SEP));
+            PlaceRequest copy = place.clone();
+            copy.setIdentifier(perspectiveName);
+            // copy arguments
+            if (!place.getParameters().isEmpty()) {
+                for (Map.Entry<String, String> elem : place.getParameters().entrySet()) {
+                    copy.addParameter(elem.getKey(),
+                                      elem.getValue());
+                }
+            }
+            return copy;
+        }
+        return place;
+    }
 
     /**
      * Check whether the screen belongs to the currently opened perspective

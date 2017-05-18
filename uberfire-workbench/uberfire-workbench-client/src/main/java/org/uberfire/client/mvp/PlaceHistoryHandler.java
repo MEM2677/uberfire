@@ -160,77 +160,6 @@ public class PlaceHistoryHandler {
     }
 
     /**
-     * Check whether the string is valid
-     * @param str
-     * @return
-     */
-    private boolean isNotBlank(final String str) {
-        return (null != str && !"".equals(str.trim()));
-    }
-
-    private boolean isNotBlank(final PlaceRequest place)
-    {
-        return (null != place && isNotBlank(place.getFullIdentifier()));
-    }
-
-    /**
-     * Returns true if the perspective is present in the URL
-     * @return
-     */
-    private boolean isPerspectiveInUrl(String url) {
-        return (isNotBlank(url) && (url.indexOf(PERSPECTIVE_SEP) > 0));
-    }
-
-//    private boolean isOtherScreenInUrl(String url) {
-//        return (isNotBlank(url) && (url.indexOf(OTHER_SCREEN_SEP) > 0));
-//    }
-
-    private boolean isPerspectiveInUrl() { // FIXME don't think this method overload is really needed
-        return isPerspectiveInUrl(bookmarkableUrl);
-    }
-
-    /**
-     * Check if the URL contains screens not belonging to the current perspective
-     * @return
-     */
-    private boolean urlContainsExtraPerspectiveScreen()
-    {
-        return (bookmarkableUrl.indexOf(OTHER_SCREEN_SEP) != -1);
-    }
-
-    /**
-     * Check whether the screen belongs to the currently opened perspective
-     * @param screen
-     * @return
-     *//*
-    private boolean isPerspectiveScreen(final String screen) {
-        return (isNotBlank(screen)
-                && (!urlContainsExtraPerspectiveScreen()
-                    || (bookmarkableUrl.indexOf(OTHER_SCREEN_SEP) > bookmarkableUrl.indexOf(screen))));
-    }*/
-
-    /**
-     * Given a screen name, this method extracts the corresponding token in the
-     * URL, that is the screen name with optional parameters and markers
-     * @param screen
-     * @return
-     *//*
-    private String getUrlToken(final String screen) {
-        int st = isPerspectiveInUrl() ? (bookmarkableUrl.indexOf(PERSPECTIVE_SEP) + 1) : 0;
-        String screensList = bookmarkableUrl.replace(OTHER_SCREEN_SEP,
-                                                     SCREEN_SEP)
-                .substring(st,
-                           bookmarkableUrl.length());
-
-        String tokens[] = screensList.split(SCREEN_SEP);
-        Optional<String> token = Arrays.asList(tokens).stream()
-                .filter(s -> s.contains(screen))
-                .findFirst();
-
-        return token.orElse(screen);
-    } */
-
-    /**
      * Return true if the given screen is already closed.
      * @param screen
      * @return
@@ -245,85 +174,14 @@ public class PlaceHistoryHandler {
     }
 
     /**
-     * Handle URL - delete a closed screen
-     * @param screenName
-     *//*
-    private void markScreenClosedInUrl(final String screenName) {
-        final boolean isPerspective = isPerspectiveScreen(screenName);
-        final String separator = isPerspective ? PERSPECTIVE_SEP : OTHER_SCREEN_SEP;
-        final String closedScreen = CLOSED_PREFIX.concat(screenName);
-        final String uniqueScreenAfterDelimiter =
-                separator.concat(screenName); // |screen or $screen
-        final String firstScreenAfterDelimiter =
-                uniqueScreenAfterDelimiter.concat(SCREEN_SEP); // |screen, or $screen,
-        final String commaSeparatedScreen =
-                screenName.concat(SCREEN_SEP); // screen,
-
-        // check screen already closed
-        if (isScreenClosed(closedScreen)) {
-            return;
-        }
-        if (isPerspective) {
-            bookmarkableUrl = bookmarkableUrl.replace(screenName,
-                                                      closedScreen);
-        } else {
-            // check for SEP + screen + ","
-            if (bookmarkableUrl.contains(firstScreenAfterDelimiter)) {
-                bookmarkableUrl = bookmarkableUrl.replace(firstScreenAfterDelimiter,
-                                                          separator);
-            } else if (bookmarkableUrl.contains(uniqueScreenAfterDelimiter)) {
-                bookmarkableUrl = bookmarkableUrl.replace(uniqueScreenAfterDelimiter,
-                                                          "");
-            } else if (bookmarkableUrl.contains(commaSeparatedScreen)) {
-                bookmarkableUrl = bookmarkableUrl.replace(commaSeparatedScreen,
-                                                          "");
-            } else {
-                bookmarkableUrl = bookmarkableUrl.replace(screenName,
-                                                          "");
-            }
-        }
+     * Needed for testing
+     * @param place
+     * @return
+     */
+    public PlaceRequest getPerspectiveFromPlace(final PlaceRequest place)
+    {
+        return BookmarkableUrlHelper.getPerspectiveFromPlace(place);
     }
-    */
-
-    /**
-     * Handle URL - add a newly opened screen
-     * @param screenName
-     *//*
-    private void markScreenOpenInUrl(String screenName) {
-        String closedScreen = CLOSED_PREFIX.concat(screenName);
-
-        // if the length exceeds the max allowed size do nothing
-        if (isNotBlank(screenName) && isNotBlank(bookmarkableUrl) &&
-                bookmarkableUrl.length() + screenName.length() >= MAX_NAV_URL_SIZE) {
-            return;
-        }
-
-        // if the screen was closed
-        if (bookmarkableUrl.indexOf(closedScreen) != -1) {
-            bookmarkableUrl = bookmarkableUrl.replace(closedScreen,
-                                                      screenName);
-        } else if (bookmarkableUrl.indexOf(screenName) > 0) {
-            // do nothing coz the screen is already present
-        } else if (!isPerspectiveInUrl()) {
-            // must add the screen in the group of the current perspective (which is not yet loaded)
-            if (isNotBlank(bookmarkableUrl)) {
-                bookmarkableUrl = bookmarkableUrl.concat(SCREEN_SEP).concat(screenName);
-            } else {
-                bookmarkableUrl = screenName;
-            }
-        } else {
-            // this is a screen outside the current perspective
-            if (!urlContainsExtraPerspectiveScreen()) {
-                // add the '$' if needed
-                bookmarkableUrl = bookmarkableUrl.concat(OTHER_SCREEN_SEP).concat(screenName);
-            }
-            // otherwise append the screen after the last element
-            else {
-                bookmarkableUrl = bookmarkableUrl.concat(SCREEN_SEP).concat(screenName);
-            }
-        }
-    }
-    */
 
     /**
      * register opened screen of perspective
@@ -342,7 +200,7 @@ public class PlaceHistoryHandler {
 //        }
 
         if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
-            if (!isPerspectiveInUrl()) {
+            if (!BookmarkableUrlHelper.isPerspectiveInUrl(bookmarkableUrl)) {
                 bookmarkableUrl = id.concat(PERSPECTIVE_SEP).concat(bookmarkableUrl);
             }
         } else if (activity.isType(ActivityResourceType.SCREEN.name())) {
@@ -351,89 +209,10 @@ public class PlaceHistoryHandler {
                     : place.getFullIdentifier();
             // add screen to the bookmarkableUrl
             bookmarkableUrl =
-                    BookmarkableUrlHelper.registerOpenedScreen(bookmarkableUrl, id);    // markScreenOpenInUrl(id);
+                    BookmarkableUrlHelper.registerOpenedScreen(bookmarkableUrl, id);
         }
         onPlaceChange(place);
     }
-
-    /**
-     * Get the perspective id from the URL.
-     * @param place\
-     * @return
-     */
-    public PlaceRequest getPerspectiveFromPlace(PlaceRequest place) {
-        String url = place.getFullIdentifier();
-
-        if (isPerspectiveInUrl(url)) {
-            String perspectiveName = url.substring(0,
-                                                   url.indexOf(PERSPECTIVE_SEP));
-            PlaceRequest copy = place.clone();
-            copy.setIdentifier(perspectiveName);
-            // copy arguments
-            if (!place.getParameters().isEmpty()) {
-                for (Map.Entry<String, String> elem : place.getParameters().entrySet()) {
-                    copy.addParameter(elem.getKey(),
-                                      elem.getValue());
-                }
-            }
-            return copy;
-        }
-        return place;
-    }
-
-    /**
-     * Return all the screens (opened or closed) that is, everything
-     * after the perspective declaration
-     * @param place
-     * @return
-     *//*
-    public Set<String> getScreensFromPlace(final PlaceRequest place) {
-        String url;
-
-        if (!isNotBlank(place)) {
-            return new HashSet<String>();
-        }
-        // get everything after the perspective
-        if (isPerspectiveInUrl(place.getFullIdentifier())) {
-            String request = place.getFullIdentifier();
-
-            url = request.substring(request.indexOf(PERSPECTIVE_SEP) + 1);
-        }
-        else {
-            url = place.getFullIdentifier();
-        }
-        // replace the '$' with a comma ','
-        url = url.replace(OTHER_SCREEN_SEP, SCREEN_SEP);
-        String[] token = url.split(SCREEN_SEP);
-        return new HashSet<>(Arrays.asList(token));
-    }
-    */
-
-    /**
-     * Get the opened screens in the given place request
-     * @param place
-     * @return
-     *//*
-    public Set<String> getClosedScreenFromPlace(final PlaceRequest place) {
-        Set<String> screens = getScreensFromPlace(place);
-        Set<String> result = screens.stream()
-                .filter(s -> s.startsWith(CLOSED_PREFIX))
-                .collect(Collectors.toSet());
-        return result;
-    } */
-
-    /**
-     * Get the opened screens in the given place request
-     * @param place
-     * @return
-     *//*
-    public Set<String> getOpenedScreenFromPlace(final PlaceRequest place) {
-        Set<String> screens = getScreensFromPlace(place);
-        Set<String> result = screens.stream()
-                .filter(s -> !s.startsWith(CLOSED_PREFIX))
-                .collect(Collectors.toSet());
-        return result;
-    } */
 
     public void registerClose(Activity activity,
                               PlaceRequest place,
@@ -448,8 +227,8 @@ public class PlaceHistoryHandler {
             final String token = BookmarkableUrlHelper.getUrlToken(bookmarkableUrl,
                                                                    id);
 
-//            markScreenClosedInUrl(token);
-            bookmarkableUrl = BookmarkableUrlHelper.registerClosedScreen(bookmarkableUrl,
+            bookmarkableUrl =
+                    BookmarkableUrlHelper.registerClosedScreen(bookmarkableUrl,
                                                                          token);
         }
         // update bookmarkableUrl

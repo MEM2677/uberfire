@@ -175,7 +175,6 @@ public class PlaceManagerImpl
 
     @Override
     public void goTo(PlaceRequest place) {
-
         goTo(place,
              (PanelDefinition) null);
     }
@@ -221,6 +220,7 @@ public class PlaceManagerImpl
     @Override
     public void goTo(PlaceRequest place,
                      HasWidgets addTo) {
+        GWT.log("--0--");
         goToTargetPanel(place,
                         panelManager.addCustomPanel(addTo,
                                                     UnanchoredStaticWorkbenchPanelPresenter.class.getName()));
@@ -305,7 +305,7 @@ public class PlaceManagerImpl
                 doWhenFinished.execute();
             } else if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
 
-                GWT.log("--- perspective start --");
+                GWT.log("--- perspective start ---");
                 // clean the URL
                 placeHistoryHandler.flush();
 
@@ -350,7 +350,7 @@ public class PlaceManagerImpl
         final boolean isDockedScreen = screenElement.startsWith(placeHistoryHandler.DOCK_PREFIX);
         final String screenId = isDockedScreen ? screenElement.substring(1) : screenElement;
 
-        GWT.log("processing screen: " + screenName + "close: " + isCloseOperation + " docked: " + isDockedScreen);
+        GWT.log("processing screen: " + screenId + " close: " + isCloseOperation + " docked: " + isDockedScreen);
 //        GWT.log("screenId: " + screenId);
 
         if (isDockedScreen)

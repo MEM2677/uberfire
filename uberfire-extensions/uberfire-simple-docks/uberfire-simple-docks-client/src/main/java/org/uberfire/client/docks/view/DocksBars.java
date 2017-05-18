@@ -22,6 +22,7 @@ import javax.enterprise.context.Dependent;
 import javax.enterprise.event.Event;
 import javax.inject.Inject;
 
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.user.client.ui.Widget;
 import org.uberfire.client.docks.view.bars.DocksCollapsedBar;
@@ -88,6 +89,7 @@ public class DocksBars {
     }
 
     public void addDock(UberfireDock dock) {
+        GWT.log("§§§§§§§§§§§§§§§§§§");
         DocksBar docksBar = getDockBar(dock);
         docksBar.addDock(dock,
                          createDockSelectCommand(dock,
@@ -193,6 +195,7 @@ public class DocksBars {
 
     ParameterizedCommand<String> createDockSelectCommand(final UberfireDock targetDock,
                                                          final DocksBar docksBar) {
+        GWT.log("~~~~~~~~~~~~~~~~~~");
         return clickDockName -> {
             if (targetDock != null) {
                 selectDock(targetDock,
@@ -219,6 +222,7 @@ public class DocksBars {
                          docksBar,
                          expandedBar);
         expand(docksBar.getDockResizeBar());
+        GWT.log("^^^^^^^^^^^^^^^^^^^^");
         placeManager.goTo(placeRequest,
                           expandedBar.targetPanel());
 

@@ -45,6 +45,7 @@ import org.uberfire.backend.vfs.Path;
 import org.uberfire.client.mvp.AbstractPopupActivity;
 import org.uberfire.client.mvp.Activity;
 import org.uberfire.client.mvp.ActivityManager;
+import org.uberfire.client.mvp.BookmarkableUrlHelper;
 import org.uberfire.client.mvp.ContextActivity;
 import org.uberfire.client.mvp.PerspectiveActivity;
 import org.uberfire.client.mvp.PerspectiveManager;

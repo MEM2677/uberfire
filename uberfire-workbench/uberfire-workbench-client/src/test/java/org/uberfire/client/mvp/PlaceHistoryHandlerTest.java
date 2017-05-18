@@ -52,7 +52,7 @@ public class PlaceHistoryHandlerTest {
     public void testPerspectiveFromUrlSimple() {
         PlaceRequest req = new DefaultPlaceRequest("perspective");
 
-        PlaceRequest place = placeHistoryHandler.getPerspectiveFromPlace(req);
+        PlaceRequest place = BookmarkableUrlHelper.getPerspectiveFromPlace(req);
         assertNotNull(place);
         assertEquals("perspective",
                      place.getIdentifier());
@@ -66,7 +66,7 @@ public class PlaceHistoryHandlerTest {
 
         PlaceRequest req = new DefaultPlaceRequest(REQUEST);
 
-        PlaceRequest place = placeHistoryHandler.getPerspectiveFromPlace(req);
+        PlaceRequest place = BookmarkableUrlHelper.getPerspectiveFromPlace(req);
         assertNotNull(place);
         assertEquals("perspective",
                      place.getIdentifier());

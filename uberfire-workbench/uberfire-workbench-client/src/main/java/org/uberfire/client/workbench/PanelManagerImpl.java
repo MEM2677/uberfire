@@ -26,6 +26,7 @@ import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.ScheduledCommand;
 import com.google.gwt.event.logical.shared.AttachEvent;
@@ -568,6 +569,7 @@ public class PanelManagerImpl implements PanelManager {
                     public void execute() {
                         try {
                             for (PartDefinition part : ensureIterable(panelPresenter.getDefinition().getParts())) {
+                                GWT.log("--cleaning panel-- (" + part.getPlace().getIdentifier()+ ")");
                                 placeManager.get().closePlace(part.getPlace());
                             }
 

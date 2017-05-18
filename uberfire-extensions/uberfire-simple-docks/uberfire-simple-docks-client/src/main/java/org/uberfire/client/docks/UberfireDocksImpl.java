@@ -98,6 +98,7 @@ public class UberfireDocksImpl implements UberfireDocks {
     @Override
     public void add(UberfireDock... docks) {
         for (UberfireDock dock : docks) {
+            GWT.log("new dock: " + dock.getPlaceRequest().getIdentifier() + " perspective: " + dock.getAssociatedPerspective());
             if (dock.getAssociatedPerspective() != null) {
                 List<UberfireDock> uberfireDocks = docksPerPerspective.get(dock.getAssociatedPerspective());
                 if (uberfireDocks == null) {

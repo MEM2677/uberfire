@@ -28,6 +28,7 @@ import com.google.gwt.user.client.ui.HasWidgets;
 import org.jboss.errai.common.client.dom.HTMLElement;
 import org.jboss.errai.ioc.client.QualifierUtil;
 import org.jboss.errai.ioc.client.container.IOC;
+import org.jboss.errai.ioc.client.container.SyncBeanManager;
 import org.jboss.errai.ioc.client.container.SyncBeanManagerImpl;
 import org.junit.Before;
 import org.junit.Test;
@@ -113,6 +114,8 @@ public class PlaceManagerTest {
     // Matteo
     @Mock
     PerspectiveActivity defaultPerspective;
+    @Mock
+    SyncBeanManager iocManager;
     @Mock
     UberfireDocks uberfireDock;
 

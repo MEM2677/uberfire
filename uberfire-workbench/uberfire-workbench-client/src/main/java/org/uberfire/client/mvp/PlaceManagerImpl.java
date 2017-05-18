@@ -41,6 +41,8 @@ import org.jboss.errai.common.client.dom.HTMLElement;
 import org.jboss.errai.common.client.ui.ElementWrapperWidget;
 import org.jboss.errai.ioc.client.api.EnabledByProperty;
 import org.jboss.errai.ioc.client.api.SharedSingleton;
+import org.jboss.errai.ioc.client.container.SyncBeanDef;
+import org.jboss.errai.ioc.client.container.SyncBeanManager;
 import org.uberfire.backend.vfs.ObservablePath;
 import org.uberfire.backend.vfs.Path;
 import org.uberfire.client.menu.SplashScreenMenuPresenter;
@@ -129,14 +131,27 @@ public class PlaceManagerImpl
     @Inject
     private LayoutSelection layoutSelection;
     @Inject
+    private SyncBeanManager iocManager;
+    // do not @Inject this!
     private UberfireDocks uberfireDocks;
+
 
     @PostConstruct
     public void initPlaceHistoryHandler() {
         getPlaceHistoryHandler().registerOpen(this,
                                               produceEventBus(),
                                               DefaultPlaceRequest.NOWHERE);
+
         workbenchLayout = layoutSelection.get();
+
+        // get the UberfireDocks bean (if any)
+        if (null != iocManager) {
+            SyncBeanDef<UberfireDocks> dockBean = iocManager.lookupBean(UberfireDocks.class);
+
+            if (null != dockBean) {
+                uberfireDocks = dockBean.getInstance();
+            }
+        }
     }
 
     private PlaceHistoryHandler getPlaceHistoryHandler() {
@@ -290,6 +305,7 @@ public class PlaceManagerImpl
                 doWhenFinished.execute();
             } else if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
 
+                GWT.log("--- perspective start --");
                 // clean the URL
                 placeHistoryHandler.flush();
 
@@ -309,6 +325,7 @@ public class PlaceManagerImpl
                                                  isDock);
 
                 // matteo in this point perspective is loaded and all default screen are open
+                GWT.log("--- perspective stop --");
             }
         } else {
             goTo(resolved.getPlaceRequest(),
@@ -333,9 +350,7 @@ public class PlaceManagerImpl
         final boolean isDockedScreen = screenElement.startsWith(placeHistoryHandler.DOCK_PREFIX);
         final String screenId = isDockedScreen ? screenElement.substring(1) : screenElement;
 
-//        GWT.log("processing screen: " + screenName);
-//        GWT.log("isCloseOperation: " + isCloseOperation);
-//        GWT.log("isDockedScreen: " + isDockedScreen);
+        GWT.log("processing screen: " + screenName + "close: " + isCloseOperation + " docked: " + isDockedScreen);
 //        GWT.log("screenId: " + screenId);
 
         if (isDockedScreen)
@@ -372,7 +387,7 @@ public class PlaceManagerImpl
                 if (open) {
                     uberfireDocks.expand(dock);
                 } else {
-                    uberfireDocks.collapse(dock);
+                    closePlace(dock.getPlaceRequest());
                 }
             }
         }
@@ -1098,9 +1113,9 @@ public class PlaceManagerImpl
     {
         Activity currentActivity = perspectiveManager.getCurrentPerspective();
         String perspectiveName = currentActivity.getIdentifier();
-        boolean isDocked =
-                uberfireDocks.isScreenDockedInPerspective(perspectiveName,
-                                                          screenName);
+        boolean isDocked = (null != uberfireDocks
+                && uberfireDocks.isScreenDockedInPerspective(perspectiveName,
+                                                          screenName));
         return isDocked;
     }
 
@@ -1114,7 +1129,8 @@ public class PlaceManagerImpl
                                    PlaceRequest place) {
         boolean isDocked = false;
 
-        if (activity.isType(ActivityResourceType.SCREEN.name())) {
+        if (null != uberfireDocks
+                && activity.isType(ActivityResourceType.SCREEN.name())) {
             isDocked = isScreenDocked(place.getIdentifier());
         }
         return isDocked;

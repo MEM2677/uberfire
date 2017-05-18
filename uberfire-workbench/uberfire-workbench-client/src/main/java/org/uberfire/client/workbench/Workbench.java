@@ -20,7 +20,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Event;
@@ -47,6 +46,7 @@ import org.jboss.errai.ioc.client.container.SyncBeanManager;
 import org.jboss.errai.security.shared.api.identity.User;
 import org.slf4j.Logger;
 import org.uberfire.backend.vfs.Path;
+import org.uberfire.client.mvp.BookmarkableUrlHelper;
 import org.uberfire.client.mvp.PerspectiveActivity;
 import org.uberfire.client.mvp.PlaceHistoryHandler;
 import org.uberfire.client.mvp.PlaceManager;
@@ -302,24 +302,8 @@ public class Workbench {
             final PlaceRequest perspective = placeHistoryHandler.getPerspectiveFromPlace(restore);
             // perspective first
             placeManager.goTo(perspective);
-            /*
-            // close screens
-            Set<String> closedViews = placeHistoryHandler.getClosedScreenFromPlace(restore);
-            Set<String> openViews = placeHistoryHandler.getOpenedScreenFromPlace(restore);
 
-
-            List<String> screens = closedViews.stream()
-                    .filter(v -> !v.startsWith(placeHistoryHandler.DOCK_PREFIX))
-                    .collect(Collectors.toList());
-            List<String> docks = openViews.stream()
-                    .filter(v -> v.startsWith(placeHistoryHandler.DOCK_PREFIX))
-                    .collect(Collectors.toList());
-            // close screen
-            screens.forEach(s -> placeManager.restoreScreens(s));
-            docks.forEach(s -> placeManager.restoreScreens(s));
-            */
-
-            Set<String> screens = placeHistoryHandler.getScreensFromPlace(restore);
+            Set<String> screens = BookmarkableUrlHelper.getScreensFromPlace(restore);
             screens.forEach(s -> placeManager.restoreScreens(s));
 
         } else {

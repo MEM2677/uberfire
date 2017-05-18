@@ -362,7 +362,7 @@ public class PlaceHistoryHandlerTest {
         final String url = "perspective|screen1,!screen2,~screen3$!screen4";
         final PlaceRequest req = new DefaultPlaceRequest(url);
 
-        Set<String> opened = placeHistoryHandler.getOpenedScreenFromPlace(req);
+        Set<String> opened = BookmarkableUrlHelper.getOpenedScreenFromPlace(req);
         assertNotNull(opened);
         assertEquals(3L, opened.size());
         assertTrue(opened.contains(SCREEN1_ID));
@@ -375,7 +375,7 @@ public class PlaceHistoryHandlerTest {
         final String url = "perspective|screen1,~!screen2,~screen3$~!screen4";
         final PlaceRequest req = new DefaultPlaceRequest(url);
 
-        Set<String> closed = placeHistoryHandler.getClosedScreenFromPlace(req);
+        Set<String> closed = BookmarkableUrlHelper.getClosedScreenFromPlace(req);
         assertNotNull(closed);
         assertEquals(3L, closed.size());
         assertTrue(closed.contains("~" + SCREEN3_ID));

@@ -202,19 +202,19 @@ public class PlaceHistoryHandler {
      * Check whether the screen belongs to the currently opened perspective
      * @param screen
      * @return
-     */
+     *//*
     private boolean isPerspectiveScreen(final String screen) {
         return (isNotBlank(screen)
                 && (!urlContainsExtraPerspectiveScreen()
                     || (bookmarkableUrl.indexOf(OTHER_SCREEN_SEP) > bookmarkableUrl.indexOf(screen))));
-    }
+    }*/
 
     /**
      * Given a screen name, this method extracts the corresponding token in the
      * URL, that is the screen name with optional parameters and markers
      * @param screen
      * @return
-     */
+     *//*
     private String getUrlToken(final String screen) {
         int st = isPerspectiveInUrl() ? (bookmarkableUrl.indexOf(PERSPECTIVE_SEP) + 1) : 0;
         String screensList = bookmarkableUrl.replace(OTHER_SCREEN_SEP,
@@ -228,7 +228,7 @@ public class PlaceHistoryHandler {
                 .findFirst();
 
         return token.orElse(screen);
-    }
+    } */
 
     /**
      * Return true if the given screen is already closed.
@@ -247,7 +247,7 @@ public class PlaceHistoryHandler {
     /**
      * Handle URL - delete a closed screen
      * @param screenName
-     */
+     *//*
     private void markScreenClosedInUrl(final String screenName) {
         final boolean isPerspective = isPerspectiveScreen(screenName);
         final String separator = isPerspective ? PERSPECTIVE_SEP : OTHER_SCREEN_SEP;
@@ -283,11 +283,12 @@ public class PlaceHistoryHandler {
             }
         }
     }
+    */
 
     /**
      * Handle URL - add a newly opened screen
      * @param screenName
-     */
+     *//*
     private void markScreenOpenInUrl(String screenName) {
         String closedScreen = CLOSED_PREFIX.concat(screenName);
 
@@ -322,6 +323,7 @@ public class PlaceHistoryHandler {
             }
         }
     }
+    */
 
     /**
      * register opened screen of perspective
@@ -348,7 +350,8 @@ public class PlaceHistoryHandler {
             id = isDock ? DOCK_PREFIX.concat(place.getFullIdentifier())
                     : place.getFullIdentifier();
             // add screen to the bookmarkableUrl
-            markScreenOpenInUrl(id);
+            bookmarkableUrl =
+                    BookmarkableUrlHelper.registerOpenedScreen(bookmarkableUrl, id);    // markScreenOpenInUrl(id);
         }
         onPlaceChange(place);
     }
@@ -383,7 +386,7 @@ public class PlaceHistoryHandler {
      * after the perspective declaration
      * @param place
      * @return
-     */
+     *//*
     public Set<String> getScreensFromPlace(final PlaceRequest place) {
         String url;
 
@@ -404,46 +407,50 @@ public class PlaceHistoryHandler {
         String[] token = url.split(SCREEN_SEP);
         return new HashSet<>(Arrays.asList(token));
     }
+    */
 
     /**
      * Get the opened screens in the given place request
      * @param place
      * @return
-     */
+     *//*
     public Set<String> getClosedScreenFromPlace(final PlaceRequest place) {
         Set<String> screens = getScreensFromPlace(place);
         Set<String> result = screens.stream()
                 .filter(s -> s.startsWith(CLOSED_PREFIX))
                 .collect(Collectors.toSet());
         return result;
-    }
+    } */
 
     /**
      * Get the opened screens in the given place request
      * @param place
      * @return
-     */
+     *//*
     public Set<String> getOpenedScreenFromPlace(final PlaceRequest place) {
         Set<String> screens = getScreensFromPlace(place);
         Set<String> result = screens.stream()
                 .filter(s -> !s.startsWith(CLOSED_PREFIX))
                 .collect(Collectors.toSet());
         return result;
-    }
+    } */
 
     public void registerClose(Activity activity,
                               PlaceRequest place,
                               boolean isDock) {
 
-        GWT.log("~~ close: " + place.getIdentifier());
+        GWT.log("close activity: " + place.getIdentifier());
 
         final String id = isDock ? DOCK_PREFIX.concat(place.getIdentifier())
                 : place.getIdentifier();
 
         if (activity.isType(ActivityResourceType.SCREEN.name())) {
-            final String token = getUrlToken(id);
+            final String token = BookmarkableUrlHelper.getUrlToken(bookmarkableUrl,
+                                                                   id);
 
-            markScreenClosedInUrl(token);
+//            markScreenClosedInUrl(token);
+            bookmarkableUrl = BookmarkableUrlHelper.registerClosedScreen(bookmarkableUrl,
+                                                                         token);
         }
         // update bookmarkableUrl
         onPlaceChange(place);

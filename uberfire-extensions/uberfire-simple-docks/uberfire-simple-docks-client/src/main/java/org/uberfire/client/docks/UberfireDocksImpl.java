@@ -142,13 +142,6 @@ public class UberfireDocksImpl implements UberfireDocks {
     }
 
     @Override
-    public void collapse(UberfireDock dock) {
-        if (docksBars.isReady()) {
-            docksBars.clearAndCollapse(dock.getDockPosition());
-        }
-    }
-
-    @Override
     public void disable(UberfireDockPosition position,
                         String perspectiveName) {
         addToDisableDocksList(position,

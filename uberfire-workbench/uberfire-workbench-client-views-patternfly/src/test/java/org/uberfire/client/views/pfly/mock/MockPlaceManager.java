@@ -183,6 +183,11 @@ public class MockPlaceManager implements PlaceManager {
     }
 
     @Override
+    public void restoreScreens(String screenName) {
+        throw new UnsupportedOperationException("Not implemented.");
+    }
+
+    @Override
     public Command getOpenCallback(PlaceRequest place) {
         throw new UnsupportedOperationException("Not implemented.");
     }

@@ -36,4 +36,9 @@ public interface UberfireDocks {
 
     void enable(UberfireDockPosition position,
                 String perspectiveName);
+    boolean isScreenDockedInPerspective(String perspective,
+                                        String screen);
+
+    UberfireDock getDockedScreenInPerspective(String perspective,
+                                              String screen);
 }

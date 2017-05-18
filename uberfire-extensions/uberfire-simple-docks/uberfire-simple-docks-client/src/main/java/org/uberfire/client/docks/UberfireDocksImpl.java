@@ -27,14 +27,17 @@ import javax.enterprise.event.Event;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
+import com.google.gwt.core.client.GWT;
 import org.uberfire.client.docks.view.DocksBar;
 import org.uberfire.client.docks.view.DocksBars;
+import org.uberfire.client.mvp.PlaceHistoryHandler;
 import org.uberfire.client.workbench.docks.UberfireDock;
 import org.uberfire.client.workbench.docks.UberfireDockContainerReadyEvent;
 import org.uberfire.client.workbench.docks.UberfireDockPosition;
 import org.uberfire.client.workbench.docks.UberfireDockReadyEvent;
 import org.uberfire.client.workbench.docks.UberfireDocks;
 import org.uberfire.client.workbench.events.PerspectiveChange;
+import org.uberfire.mvp.PlaceRequest;
 
 @ApplicationScoped
 public class UberfireDocksImpl implements UberfireDocks {
@@ -48,6 +51,8 @@ public class UberfireDocksImpl implements UberfireDocks {
     private DocksBars docksBars;
     @Inject
     private Event<UberfireDockReadyEvent> dockReadyEvent;
+    @Inject
+    private PlaceHistoryHandler historyHandler;
 
     @Inject
     public UberfireDocksImpl(DocksBars docksBars) {
@@ -63,6 +68,31 @@ public class UberfireDocksImpl implements UberfireDocks {
         if (configurations != null && configurations.get(IDE_DOCK) != null) {
             docksBars.setIDEdock(Boolean.valueOf(configurations.get(IDE_DOCK)));
         }
+    }
+
+    @Override
+    public boolean isScreenDockedInPerspective(String perspective,
+                                               String screen)
+    {
+        return (getDockedScreenInPerspective(perspective, screen) != null);
+    }
+
+    @Override
+    public UberfireDock getDockedScreenInPerspective(String perspective,
+                                                     String screen)
+    {
+        UberfireDock res = null;
+        List<UberfireDock> docks = docksPerPerspective.get(perspective);
+
+        if (null != docks
+                && !docks.isEmpty())
+        {
+            res = docks.stream()
+                    .filter(s -> s.getPlaceRequest().getIdentifier().equals(screen))
+                    .findFirst()
+                    .orElse(null);
+        }
+        return (res);
     }
 
     @Override

@@ -27,6 +27,7 @@ import com.google.web.bindery.event.shared.EventBus;
 import com.google.web.bindery.event.shared.HandlerRegistration;
 import org.uberfire.mvp.PlaceRequest;
 import org.uberfire.mvp.impl.DefaultPlaceRequest;
+import org.uberfire.workbench.model.ActivityResourceType;
 
 @Dependent
 public class PlaceHistoryHandler {
@@ -38,6 +39,15 @@ public class PlaceHistoryHandler {
     private PlaceManager placeManager;
     private PlaceRequest defaultPlaceRequest = PlaceRequest.NOWHERE;
 
+    private String bookmarkableUrl = "";
+
+    public final static String PERSPECTIVE_SEP = "|";
+    public final static String SCREEN_SEP = ",";
+    public final static String OTHER_SCREEN_SEP = "$";
+    public final static String CLOSED_PREFIX = "~";
+    public final static String DOCK_PREFIX = "!";
+
+    public final static int MAX_NAV_URL_SIZE = 1900;
     /**
      * Create a new PlaceHistoryHandler.
      */
@@ -57,7 +67,7 @@ public class PlaceHistoryHandler {
      * Initialize this place history handler.
      * @return a registration object to de-register the handler
      */
-    public HandlerRegistration register(final PlaceManager placeManager,
+    public HandlerRegistration registerOpen(final PlaceManager placeManager,
                                         final EventBus eventBus,
                                         final PlaceRequest defaultPlaceRequest) {
         this.placeManager = placeManager;
@@ -98,11 +108,12 @@ public class PlaceHistoryHandler {
         }
     }
 
-    /**
-     * Visible for testing.
-     */
     Logger log() {
         return log;
+    }
+
+    public String getBookmarkableUrl() {
+        return bookmarkableUrl;
     }
 
     private void handleHistoryToken(String token) {
@@ -125,12 +136,100 @@ public class PlaceHistoryHandler {
         placeManager.goTo(newPlaceRequest);
     }
 
+    /**
+     * bookmarkableUrl schema   perspective#screen-1,screen-2#editor-path1,editor-path2
+     * @param newPlaceRequest
+     * @return
+     */
     private String tokenForPlace(final PlaceRequest newPlaceRequest) {
         if (defaultPlaceRequest.equals(newPlaceRequest)) {
             return "";
         }
+        return bookmarkableUrl;
+    }
 
-        return newPlaceRequest.getFullIdentifier();
+    /**
+     * Return true if the given screen is already closed.
+     * @param screen
+     * @return
+     */
+    private boolean isScreenClosed(String screen)
+    {
+        if (!screen.startsWith(CLOSED_PREFIX))
+        {
+            screen = CLOSED_PREFIX.concat(screen);
+        }
+        return (bookmarkableUrl.indexOf(screen) != -1);
+    }
+
+    /**
+     * Needed for testing
+     * @param place
+     * @return
+     */
+    public PlaceRequest getPerspectiveFromPlace(final PlaceRequest place)
+    {
+        return BookmarkableUrlHelper.getPerspectiveFromPlace(place);
+    }
+
+    /**
+     * register opened screen of perspective
+     * @param activity
+     * @param place
+     * @param isDock
+     */
+    public void registerOpen(Activity activity,
+                             PlaceRequest place,
+                             boolean isDock) {
+        String id = place.getFullIdentifier();
+
+//        GWT.log(" ~~ adding token ~~ " + activity.getResourceType().getName() + ":" + id + " docks " + bookmarkableUrl.toString());
+//        if (place.getPath() != null) {
+//            GWT.log("    >>> path: " + place.getPath());
+//        }
+
+        if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
+            if (!BookmarkableUrlHelper.isPerspectiveInUrl(bookmarkableUrl)) {
+                bookmarkableUrl = id.concat(PERSPECTIVE_SEP).concat(bookmarkableUrl);
+            }
+        } else if (activity.isType(ActivityResourceType.SCREEN.name())) {
+            // add the dock marker if needed
+            id = isDock ? DOCK_PREFIX.concat(place.getFullIdentifier())
+                    : place.getFullIdentifier();
+            // add screen to the bookmarkableUrl
+            bookmarkableUrl =
+                    BookmarkableUrlHelper.registerOpenedScreen(bookmarkableUrl, id);
+        }
+        onPlaceChange(place);
+    }
+
+    public void registerClose(Activity activity,
+                              PlaceRequest place,
+                              boolean isDock) {
+
+//        GWT.log("close activity: " + place.getIdentifier());
+
+        final String id = isDock ? DOCK_PREFIX.concat(place.getIdentifier())
+                : place.getIdentifier();
+
+        if (activity.isType(ActivityResourceType.SCREEN.name())) {
+            final String token = BookmarkableUrlHelper.getUrlToken(bookmarkableUrl,
+                                                                   id);
+
+            bookmarkableUrl =
+                    BookmarkableUrlHelper.registerClosedScreen(bookmarkableUrl,
+                                                                         token);
+        }
+        // update bookmarkableUrl
+        onPlaceChange(place);
+    }
+
+    public void flush() {
+        bookmarkableUrl = "";
+    }
+
+    public String getToken() {
+        return (historian.getToken());
     }
 
     /**

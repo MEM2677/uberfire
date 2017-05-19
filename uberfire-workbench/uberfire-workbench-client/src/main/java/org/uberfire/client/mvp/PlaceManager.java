@@ -171,9 +171,4 @@ public interface PlaceManager {
      */
     @JsIgnore
     Collection<PathPlaceRequest> getActivitiesForResourceType(final ResourceTypeDefinition type);
-    /**
-     * Restore a screen as specified in the bookmarkable URL
-     * @param screenName
-     */
-    void restoreScreens(final String screenName);
 }

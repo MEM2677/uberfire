@@ -23,11 +23,21 @@ public enum UberfireDockPosition {
         public boolean allowSingleDockItem() {
             return false;
         }
+
+        @Override
+        public String getShortName() {
+            return "S";
+        }
     },
     WEST {
         @Override
         public boolean allowSingleDockItem() {
             return true;
+        }
+
+        @Override
+        public String getShortName() {
+            return "W";
         }
     },
     EAST {
@@ -35,7 +45,14 @@ public enum UberfireDockPosition {
         public boolean allowSingleDockItem() {
             return false;
         }
+
+        @Override
+        public String getShortName() {
+            return "E";
+        }
     };
 
     public abstract boolean allowSingleDockItem();
+
+    public abstract String getShortName();
 }

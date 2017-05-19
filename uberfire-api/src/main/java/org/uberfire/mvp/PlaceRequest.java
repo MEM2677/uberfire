@@ -59,6 +59,8 @@ public interface PlaceRequest {
      */
     boolean isUpdateLocationBarAllowed();
 
+    void setUpdateLocationBar(boolean updateLocationBar);
+
     /**
      * Returns the path associated with this {@link PlaceRequest}.
      */

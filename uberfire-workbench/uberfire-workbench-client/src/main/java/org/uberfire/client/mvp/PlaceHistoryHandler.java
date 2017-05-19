@@ -16,20 +16,21 @@
 package org.uberfire.client.mvp;
 
 import java.util.logging.Logger;
-import javax.enterprise.context.Dependent;
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
 import com.google.gwt.core.client.GWT;
-import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.user.client.History;
 import com.google.web.bindery.event.shared.EventBus;
 import com.google.web.bindery.event.shared.HandlerRegistration;
+import org.uberfire.client.workbench.docks.UberfireDocksInteractionEvent;
 import org.uberfire.mvp.PlaceRequest;
 import org.uberfire.mvp.impl.DefaultPlaceRequest;
 import org.uberfire.workbench.model.ActivityResourceType;
 
-@Dependent
+@ApplicationScoped
 public class PlaceHistoryHandler {
 
     private static final Logger log = Logger.getLogger(PlaceHistoryHandler.class.getName());
@@ -38,16 +39,8 @@ public class PlaceHistoryHandler {
     private PlaceRequestHistoryMapper mapper;
     private PlaceManager placeManager;
     private PlaceRequest defaultPlaceRequest = PlaceRequest.NOWHERE;
+    private String currentBookmarkableURLStatus = "";
 
-    private String bookmarkableUrl = "";
-
-    public final static String PERSPECTIVE_SEP = "|";
-    public final static String SCREEN_SEP = ",";
-    public final static String OTHER_SCREEN_SEP = "$";
-    public final static String CLOSED_PREFIX = "~";
-    public final static String DOCK_PREFIX = "!";
-
-    public final static int MAX_NAV_URL_SIZE = 1900;
     /**
      * Create a new PlaceHistoryHandler.
      */
@@ -67,53 +60,37 @@ public class PlaceHistoryHandler {
      * Initialize this place history handler.
      * @return a registration object to de-register the handler
      */
-    public HandlerRegistration registerOpen(final PlaceManager placeManager,
-                                        final EventBus eventBus,
-                                        final PlaceRequest defaultPlaceRequest) {
+    public HandlerRegistration initialize(final PlaceManager placeManager,
+                                          final EventBus eventBus,
+                                          final PlaceRequest defaultPlaceRequest) {
         this.placeManager = placeManager;
         this.defaultPlaceRequest = defaultPlaceRequest;
-        /*
-         * final HandlerRegistration placeReg =
-         * eventBus.addHandler(PlaceChangeEvent.TYPE, new
-         * PlaceChangeEvent.Handler() { public void
-         * onPlaceChange(PlaceChangeEvent event) { Place newPlace =
-         * event.getNewPlace();
-         * historian.newItem(tokenForPlace(newPlaceRequest), false); } });
-         */
 
         final HandlerRegistration historyReg =
-                historian.addValueChangeHandler(new ValueChangeHandler<String>() {
-                    @Override
-                    public void onValueChange(ValueChangeEvent<String> event) {
-                        String token = event.getValue();
-                        handleHistoryToken(token);
-                    }
+                historian.addValueChangeHandler(event -> {
+                    String token = event.getValue();
+                    handleHistoryToken(token);
                 });
 
-        return new HandlerRegistration() {
-            @Override
-            public void removeHandler() {
-                PlaceHistoryHandler.this.defaultPlaceRequest = DefaultPlaceRequest.NOWHERE;
-                PlaceHistoryHandler.this.placeManager = null;
-                //placeReg.removeHandler();
-                historyReg.removeHandler();
-            }
+        return () -> {
+            PlaceHistoryHandler.this.defaultPlaceRequest = DefaultPlaceRequest.NOWHERE;
+            PlaceHistoryHandler.this.placeManager = null;
+            historyReg.removeHandler();
         };
     }
 
-    public void onPlaceChange(final PlaceRequest placeRequest) {
-        if (placeRequest.isUpdateLocationBarAllowed()) {
-            historian.newItem(tokenForPlace(placeRequest),
-                              false);
-        }
+    private void updateHistoryBar() {
+        GWT.log("Current: " + currentBookmarkableURLStatus);
+        historian.newItem(currentBookmarkableURLStatus,
+                          false);
     }
 
     Logger log() {
         return log;
     }
 
-    public String getBookmarkableUrl() {
-        return bookmarkableUrl;
+    public String getCurrentBookmarkableURLStatus() {
+        return currentBookmarkableURLStatus;
     }
 
     private void handleHistoryToken(String token) {
@@ -137,7 +114,7 @@ public class PlaceHistoryHandler {
     }
 
     /**
-     * bookmarkableUrl schema   perspective#screen-1,screen-2#editor-path1,editor-path2
+     * currentBookmarkableURLStatus schema   perspective#screen-1,screen-2#editor-path1,editor-path2
      * @param newPlaceRequest
      * @return
      */
@@ -145,7 +122,7 @@ public class PlaceHistoryHandler {
         if (defaultPlaceRequest.equals(newPlaceRequest)) {
             return "";
         }
-        return bookmarkableUrl;
+        return currentBookmarkableURLStatus;
     }
 
     /**
@@ -153,22 +130,17 @@ public class PlaceHistoryHandler {
      * @param screen
      * @return
      */
-    private boolean isScreenClosed(String screen)
-    {
-        if (!screen.startsWith(CLOSED_PREFIX))
-        {
-            screen = CLOSED_PREFIX.concat(screen);
-        }
-        return (bookmarkableUrl.indexOf(screen) != -1);
+    private boolean isScreenClosed(String screen) {
+        return BookmarkableUrlHelper.isScreenClosed(screen,
+                                                    currentBookmarkableURLStatus);
     }
 
     /**
-     * Needed for testing
+     * Extract a perspective from a place
      * @param place
      * @return
      */
-    public PlaceRequest getPerspectiveFromPlace(final PlaceRequest place)
-    {
+    public PlaceRequest getPerspectiveFromPlace(final PlaceRequest place) {
         return BookmarkableUrlHelper.getPerspectiveFromPlace(place);
     }
 
@@ -176,60 +148,65 @@ public class PlaceHistoryHandler {
      * register opened screen of perspective
      * @param activity
      * @param place
-     * @param isDock
      */
     public void registerOpen(Activity activity,
-                             PlaceRequest place,
-                             boolean isDock) {
-        String id = place.getFullIdentifier();
-
-//        GWT.log(" ~~ adding token ~~ " + activity.getResourceType().getName() + ":" + id + " docks " + bookmarkableUrl.toString());
-//        if (place.getPath() != null) {
-//            GWT.log("    >>> path: " + place.getPath());
-//        }
-
-        if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
-            if (!BookmarkableUrlHelper.isPerspectiveInUrl(bookmarkableUrl)) {
-                bookmarkableUrl = id.concat(PERSPECTIVE_SEP).concat(bookmarkableUrl);
+                             PlaceRequest place) {
+        if (place.isUpdateLocationBarAllowed()) {
+            if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
+                currentBookmarkableURLStatus = BookmarkableUrlHelper.registerOpenedPerspective(currentBookmarkableURLStatus,
+                                                                                               place);
+            } else if (activity.isType(ActivityResourceType.SCREEN.name())) {
+                currentBookmarkableURLStatus =
+                        BookmarkableUrlHelper.registerOpenedScreen(currentBookmarkableURLStatus,
+                                                                   place);
+            } else if (activity.isType(ActivityResourceType.EDITOR.name())) {
+                currentBookmarkableURLStatus =
+                        BookmarkableUrlHelper.registerOpenedScreen(currentBookmarkableURLStatus,
+                                                                   place);
             }
-        } else if (activity.isType(ActivityResourceType.SCREEN.name())) {
-            // add the dock marker if needed
-            id = isDock ? DOCK_PREFIX.concat(place.getFullIdentifier())
-                    : place.getFullIdentifier();
-            // add screen to the bookmarkableUrl
-            bookmarkableUrl =
-                    BookmarkableUrlHelper.registerOpenedScreen(bookmarkableUrl, id);
+            updateHistoryBar();
         }
-        onPlaceChange(place);
     }
 
     public void registerClose(Activity activity,
-                              PlaceRequest place,
-                              boolean isDock) {
+                              PlaceRequest place) {
+        if (place.isUpdateLocationBarAllowed()) {
+            final String id = place.getIdentifier();
+            if (activity.isType(ActivityResourceType.SCREEN.name())) {
+                final String token = BookmarkableUrlHelper.getUrlToken(currentBookmarkableURLStatus,
+                                                                       id);
 
-//        GWT.log("close activity: " + place.getIdentifier());
-
-        final String id = isDock ? DOCK_PREFIX.concat(place.getIdentifier())
-                : place.getIdentifier();
-
-        if (activity.isType(ActivityResourceType.SCREEN.name())) {
-            final String token = BookmarkableUrlHelper.getUrlToken(bookmarkableUrl,
-                                                                   id);
-
-            bookmarkableUrl =
-                    BookmarkableUrlHelper.registerClosedScreen(bookmarkableUrl,
-                                                                         token);
+                currentBookmarkableURLStatus =
+                        BookmarkableUrlHelper.registerClose(currentBookmarkableURLStatus,
+                                                            token);
+            }
+            updateHistoryBar();
         }
-        // update bookmarkableUrl
-        onPlaceChange(place);
     }
 
     public void flush() {
-        bookmarkableUrl = "";
+        currentBookmarkableURLStatus = "";
     }
 
     public String getToken() {
         return (historian.getToken());
+    }
+
+    public void registerOpenDock(@Observes UberfireDocksInteractionEvent event) {
+        if (event.getType() == UberfireDocksInteractionEvent.InteractionType.SELECTED) {
+            currentBookmarkableURLStatus = BookmarkableUrlHelper.registerOpenedDock(currentBookmarkableURLStatus,
+                                                                                    event.getTargetDock());
+            updateHistoryBar();
+        }
+    }
+
+    public void registerCloseDock(@Observes UberfireDocksInteractionEvent event) {
+        if (event.getType() == UberfireDocksInteractionEvent.InteractionType.DESELECTED) {
+
+            currentBookmarkableURLStatus = BookmarkableUrlHelper.registerClosedDock(currentBookmarkableURLStatus,
+                                                                                    event.getTargetDock());
+            updateHistoryBar();
+        }
     }
 
     /**

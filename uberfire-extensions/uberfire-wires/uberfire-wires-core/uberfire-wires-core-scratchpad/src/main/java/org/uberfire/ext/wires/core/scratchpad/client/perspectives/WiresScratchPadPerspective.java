@@ -16,6 +16,8 @@
 
 package org.uberfire.ext.wires.core.scratchpad.client.perspectives;
 
+import java.util.HashMap;
+import java.util.Map;
 import javax.enterprise.context.ApplicationScoped;
 
 import org.uberfire.client.annotations.Perspective;
@@ -58,7 +60,10 @@ public class WiresScratchPadPerspective {
         final PanelDefinition layersPanel = new PanelDefinitionImpl(MultiListWorkbenchPanelPresenter.class.getName());
         layersPanel.setMinWidth(MIN_WIDTH_PANEL);
         layersPanel.setWidth(WIDTH_PANEL);
-        layersPanel.addPart(new PartDefinitionImpl(new DefaultPlaceRequest(WIRES_LAYERS_SCREEN)));
+        Map<String, String> params = new HashMap<>();
+        params.put("a", "b");
+        params.put("a1", "b1");
+        layersPanel.addPart(new PartDefinitionImpl(new DefaultPlaceRequest(WIRES_LAYERS_SCREEN, params)));
 
         final PanelDefinition actionsPanel = new PanelDefinitionImpl(MultiListWorkbenchPanelPresenter.class.getName());
         actionsPanel.setMinWidth(MIN_WIDTH_PANEL);

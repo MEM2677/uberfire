@@ -37,7 +37,6 @@ import org.uberfire.client.workbench.docks.UberfireDockPosition;
 import org.uberfire.client.workbench.docks.UberfireDockReadyEvent;
 import org.uberfire.client.workbench.docks.UberfireDocks;
 import org.uberfire.client.workbench.events.PerspectiveChange;
-import org.uberfire.mvp.PlaceRequest;
 
 @ApplicationScoped
 public class UberfireDocksImpl implements UberfireDocks {
@@ -51,8 +50,6 @@ public class UberfireDocksImpl implements UberfireDocks {
     private DocksBars docksBars;
     @Inject
     private Event<UberfireDockReadyEvent> dockReadyEvent;
-    @Inject
-    private PlaceHistoryHandler historyHandler;
 
     @Inject
     public UberfireDocksImpl(DocksBars docksBars) {

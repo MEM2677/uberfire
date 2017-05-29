@@ -194,7 +194,8 @@ public class PlaceHistoryHandler {
 
     public void registerOpenDock(@Observes UberfireDocksInteractionEvent event) {
         if (event.getType() == UberfireDocksInteractionEvent.InteractionType.SELECTED) {
-            currentBookmarkableURLStatus = BookmarkableUrlHelper.registerOpenedDock(currentBookmarkableURLStatus,
+            currentBookmarkableURLStatus =
+                    BookmarkableUrlHelper.registerOpenedDock(currentBookmarkableURLStatus,
                                                                                     event.getTargetDock());
             updateHistoryBar();
         }
@@ -203,7 +204,8 @@ public class PlaceHistoryHandler {
     public void registerCloseDock(@Observes UberfireDocksInteractionEvent event) {
         if (event.getType() == UberfireDocksInteractionEvent.InteractionType.DESELECTED) {
 
-            currentBookmarkableURLStatus = BookmarkableUrlHelper.registerClosedDock(currentBookmarkableURLStatus,
+            currentBookmarkableURLStatus =
+                    BookmarkableUrlHelper.registerClosedDock(currentBookmarkableURLStatus,
                                                                                     event.getTargetDock());
             updateHistoryBar();
         }

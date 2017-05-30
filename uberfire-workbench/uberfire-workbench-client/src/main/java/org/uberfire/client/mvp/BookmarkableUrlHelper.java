@@ -1,3 +1,18 @@
+/*
+ * Copyright 2015 Red Hat, Inc. and/or its affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.uberfire.client.mvp;
 
 import java.util.Arrays;
@@ -220,21 +235,18 @@ public class BookmarkableUrlHelper {
     }
 
     /**
-     * Return all the docked screens
-     * @param place
+     * Return the docked screens in the URL
+     * @param url
      * @return
-     * @note non-docked screens are not taken into consideration
      */
-    public static Set<String> getDockedScreensFromPlace(final PlaceRequest place) {
-        String url;
+    public static Set<String> getDockedScreensFromUrl(final String url) {
         int start;
         int end;
         String docks;
 
-        if (!isNotBlank(place)) {
+        if (!isNotBlank(url)) {
             return new HashSet<>();
         }
-        url = place.getFullIdentifier();
         start = url.indexOf(DOCK_BEGIN_SEP) + 1;
         end = url.indexOf(DOCK_CLOSE_SEP) - 1;
 
@@ -243,6 +255,20 @@ public class BookmarkableUrlHelper {
                                   end);
             String[] token = docks.split(SEPARATOR);
             return new HashSet<>(Arrays.asList(token));
+        }
+        return new HashSet<>();
+    }
+
+    /**
+     * Return all the docked screens
+     * @param place
+     * @return
+     * @note non-docked screens are not taken into consideration
+     */
+    public static Set<String> getDockedScreensFromPlace(final PlaceRequest place) {
+        if (null != place)
+        {
+            return getDockedScreensFromUrl(place.getFullIdentifier());
         }
         return new HashSet<>();
     }
@@ -333,25 +359,53 @@ public class BookmarkableUrlHelper {
         return place.getFullIdentifier().concat(PERSPECTIVE_SEP).concat(currentBookmarkableURLStatus);
     }
 
-    public static String registerOpenedDock(String currentBookmarkableURLStatus,
-                                            UberfireDock targetDock) {
-        if (currentBookmarkableURLStatus.contains(DOCK_CLOSE_SEP)) {
-            return currentBookmarkableURLStatus.replace(DOCK_CLOSE_SEP,
-                                                        (getDockId(targetDock) + DOCK_CLOSE_SEP));
-        } else {
-            return currentBookmarkableURLStatus + DOCK_BEGIN_SEP + (getDockId(targetDock) + DOCK_CLOSE_SEP);
-        }
-    }
-
     private static String getDockId(UberfireDock targetDock) {
         return targetDock.getDockPosition().getShortName()
                 + targetDock.getPlaceRequest().getFullIdentifier() + SEPARATOR;
     }
 
+    public static String registerOpenedDock(String currentBookmarkableURLStatus,
+                                            UberfireDock targetDock) {
+        if (!isNotBlank(currentBookmarkableURLStatus)
+                || null == targetDock) {
+            return currentBookmarkableURLStatus;
+        }
+        final String id = getDockId(targetDock);
+        final String closed = CLOSED_DOCK_PREFIX.concat(id);
+
+        if (currentBookmarkableURLStatus.contains(DOCK_CLOSE_SEP)) {
+            String result = null;
+
+            if (!currentBookmarkableURLStatus.contains(id)) {
+                // the screen is not in the URL, insert in last position
+                result = currentBookmarkableURLStatus.replace(DOCK_CLOSE_SEP,
+                                                            (id + DOCK_CLOSE_SEP));
+            } else if (currentBookmarkableURLStatus.contains(closed)) {
+                // the screen is closed
+                result = currentBookmarkableURLStatus.replace(closed,
+                                                              id);
+            } else {
+                // screen already in URL
+                result = currentBookmarkableURLStatus;
+            }
+            return result;
+        } else {
+            return currentBookmarkableURLStatus + DOCK_BEGIN_SEP + (getDockId(targetDock) + DOCK_CLOSE_SEP);
+        }
+    }
+
     public static String registerClosedDock(String currentBookmarkableURLStatus,
                                             UberfireDock targetDock) {
+        if (!isNotBlank(currentBookmarkableURLStatus)
+                || null == targetDock) {
+            return currentBookmarkableURLStatus;
+        }
         final String id = getDockId(targetDock);
-        return currentBookmarkableURLStatus.replace(id,
-                                                    CLOSED_DOCK_PREFIX.concat(id));
+        final String closed = CLOSED_DOCK_PREFIX.concat(id);
+        if (!currentBookmarkableURLStatus.contains(closed)) {
+            return currentBookmarkableURLStatus.replace(id,
+                                                        CLOSED_DOCK_PREFIX.concat(id));
+        }
+        return currentBookmarkableURLStatus;
     }
 }

@@ -158,7 +158,6 @@ public class PlaceManagerTest {
         when(perspectiveManager.getCurrentPerspective())
                 .thenReturn(defaultPerspective);
 
-
         when(uberfireDock.isScreenDockedInPerspective(any(String.class),
                                                       any(String.class)))
                 .thenReturn(false);
@@ -194,7 +193,8 @@ public class PlaceManagerTest {
         when(kansasActivity.preferredHeight()).thenReturn(456);
 
         when(placeHistoryHandler.getPerspectiveFromPlace(any()))
-                .thenAnswer(i -> i.getArgumentAt(0, PlaceRequest.class));
+                .thenAnswer(i -> i.getArgumentAt(0,
+                                                 PlaceRequest.class));
         // arrange for the mock PerspectiveManager to invoke the doWhenFinished callbacks
         doAnswer(new Answer<Void>() {
             @SuppressWarnings({"rawtypes", "unchecked"})
@@ -263,8 +263,8 @@ public class PlaceManagerTest {
         placeManager.initPlaceHistoryHandler();
 
         verify(placeHistoryHandler).initialize(any(PlaceManager.class),
-                                             any(EventBus.class),
-                                             any(PlaceRequest.class));
+                                               any(EventBus.class),
+                                               any(PlaceRequest.class));
     }
 
     @Test
@@ -1250,7 +1250,6 @@ public class PlaceManagerTest {
                                               eq(expectedPartWidth),
                                               eq(expectedPartHeight));
 
-
         // state changes in PlaceManager itself (contract between PlaceManager and everyone)
         assertTrue("Actual place requests: " + placeManager.getActivePlaceRequests(),
                    placeManager.getActivePlaceRequests().contains(placeRequest));
@@ -1295,7 +1294,6 @@ public class PlaceManagerTest {
                never()).addWorkbenchPanel(eq(panelManager.getRoot()),
                                           any(PanelDefinition.class),
                                           any(Position.class));
-
 
         // state changes in PlaceManager itself (contract between PlaceManager and everyone)
         assertTrue(

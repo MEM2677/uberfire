@@ -1,3 +1,18 @@
+/*
+ * Copyright 2015 Red Hat, Inc. and/or its affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.uberfire.client.workbench.panels.impl;
 
 import java.util.Set;
@@ -10,9 +25,6 @@ import org.uberfire.client.workbench.docks.UberfireDockPosition;
 import org.uberfire.mvp.PlaceRequest;
 import org.uberfire.mvp.impl.DefaultPlaceRequest;
 
-/**
- * Created by matteo on 24/05/17.
- */
 public class BookmarkableUrlHelperTest extends TestCase {
 
     @Test
@@ -98,7 +110,8 @@ public class BookmarkableUrlHelperTest extends TestCase {
                 .concat("|~screen1,~screen2");
         final PlaceRequest req = new DefaultPlaceRequest(bookmarkableUrl);
 
-        req.addParameter("param", "value");
+        req.addParameter("param",
+                         "value");
         PlaceRequest place = BookmarkableUrlHelper.getPerspectiveFromPlace(req);
 
         assertNotNull(place);
@@ -219,6 +232,7 @@ public class BookmarkableUrlHelperTest extends TestCase {
         assertTrue(set.isEmpty());
     }
 
+    @Test
     public void testGetOpenedScreenFromPlace() {
         final String url = "perspective|~screen1,screen2$~screen3,screen4";
         final String url2 = "UFWidgets|PagedTableScreen[ESimpleDockScreen,!WSimpleDockScreen,ESimpleDockScreen,]";
@@ -237,6 +251,7 @@ public class BookmarkableUrlHelperTest extends TestCase {
         assertTrue(set.contains("PagedTableScreen"));
     }
 
+    @Test
     public void testGDockedScreensFromPlace() {
         final String url = "perspective|~screen1,screen2$~screen3,screen4";
         final String url2 = "UFWidgets|PagedTableScreen[ESimpleDockScreen,!WSimpleDockScreen,ESimpleDockScreen,]";
@@ -250,10 +265,31 @@ public class BookmarkableUrlHelperTest extends TestCase {
         set = BookmarkableUrlHelper.getDockedScreensFromPlace(place2);
         assertNotNull(set);
         assertFalse(set.isEmpty());
+        assertEquals(2, set.size());
         assertTrue(set.contains("ESimpleDockScreen"));
         assertTrue(set.contains("!WSimpleDockScreen"));
     }
 
+    @Test
+    public void testGDockedScreensFromPlaceString() {
+        final String url = "perspective|~screen1,screen2$~screen3,screen4";
+        final String url2 = "UFWidgets|PagedTableScreen[ESimpleDockScreen,!WSimpleDockScreen,EAnotherDockScreen,]";
+
+
+        Set<String> set = BookmarkableUrlHelper.getDockedScreensFromUrl(url);
+        assertNotNull(set);
+        assertTrue(set.isEmpty());
+
+        set = BookmarkableUrlHelper.getDockedScreensFromUrl(url2);
+        assertNotNull(set);
+        assertFalse(set.isEmpty());
+        assertEquals(3, set.size());
+        assertTrue(set.contains("ESimpleDockScreen"));
+        assertTrue(set.contains("!WSimpleDockScreen"));
+        assertTrue(set.contains("EAnotherDockScreen"));
+    }
+
+    @Test
     public void testIsScreenClosed() {
         final String url = "perspective|~screen1,screen2$~screen3,screen4";
         final String url2 = "UFWidgets|PagedTableScreen[ESimpleDockScreen,!WSimpleDockScreen,ESimpleDockScreen,]";
@@ -286,6 +322,7 @@ public class BookmarkableUrlHelperTest extends TestCase {
                 "!WSimpleDockScreen"));
     }
 
+    @Test
     public void testRegisterOpenedPerspective() {
         final String screens = "screen1,~screen2";
         final String perspective = "perspective";
@@ -299,6 +336,7 @@ public class BookmarkableUrlHelperTest extends TestCase {
                      url);
     }
 
+    @Test
     public void testRegisterOpenDock() {
         final String screens = "screen1";
         final String dockName = "dockedScreen";
@@ -323,28 +361,88 @@ public class BookmarkableUrlHelperTest extends TestCase {
                              .concat(BookmarkableUrlHelper.PERSPECTIVE_SEP)
                              .concat("screen1[WdockedScreen,WdockedScreenNew,]"),
                      url);
-
     }
 
+    @Test
+    public void testDoubleRegisterOpenDock() {
+        final String screens = "screen1";
+        final String dockName = "dockedScreen";
+        final String perspectiveName = "perspectiveName";
+        String url = perspectiveName
+                .concat(BookmarkableUrlHelper.PERSPECTIVE_SEP)
+                .concat(screens);
+        final UberfireDock dock1 = createUberfireDockForTest(dockName,
+                                                             perspectiveName);
+        final UberfireDock dock2 = createUberfireDockForTest(dockName.concat("New"),
+                                                             perspectiveName);
 
+        // open the same docked screen twice
+        url = BookmarkableUrlHelper.registerOpenedDock(url,
+                                                       dock1);
+        url = BookmarkableUrlHelper.registerOpenedDock(url,
+                                                       dock1);
+        assertEquals(perspectiveName
+                             .concat(BookmarkableUrlHelper.PERSPECTIVE_SEP)
+                             .concat("screen1[WdockedScreen,]"),
+                     url);
+        // open the another docked screen twice
+        url = BookmarkableUrlHelper.registerOpenedDock(url,
+                                                       dock2);
+        url = BookmarkableUrlHelper.registerOpenedDock(url,
+                                                       dock2);
+        assertEquals(perspectiveName
+                             .concat(BookmarkableUrlHelper.PERSPECTIVE_SEP)
+                             .concat("screen1[WdockedScreen,WdockedScreenNew,]"),
+                     url);
+    }
+
+    @Test
     public void testRegisterClosedDock() {
         final String dockName1 = "dockedScreen1";
         final String dockName2 = "dockedScreen2";
         String perspectiveName = "perspective";
         String url = "perspectiveName|screen[W" + dockName1 + ",W" + dockName2 + ",]";
         UberfireDock dock1 = createUberfireDockForTest(dockName1,
-                                                      perspectiveName);
+                                                       perspectiveName);
         UberfireDock dock2 = createUberfireDockForTest(dockName2,
-                                                      perspectiveName);
+                                                       perspectiveName);
 
-        url = BookmarkableUrlHelper.registerClosedDock(url, dock1);
+        url = BookmarkableUrlHelper.registerClosedDock(url,
+                                                       dock1);
         assertNotNull(url);
         assertTrue(url.contains("!W" + dockName1));
 
-        url = BookmarkableUrlHelper.registerClosedDock(url, dock2);
+        url = BookmarkableUrlHelper.registerClosedDock(url,
+                                                       dock2);
         assertNotNull(url);
         assertTrue(url.contains("!W" + dockName2));
+    }
 
+    @Test
+    public void testDoubleRegisterClosedDock() {
+        final String dockName1 = "dockedScreen1";
+        final String dockName2 = "dockedScreen2";
+        String perspectiveName = "perspective";
+        String url = "perspectiveName|screen[W" + dockName1 + ",W" + dockName2 + ",]";
+        UberfireDock dock1 = createUberfireDockForTest(dockName1,
+                                                       perspectiveName);
+        UberfireDock dock2 = createUberfireDockForTest(dockName2,
+                                                       perspectiveName);
+
+        // close the same dock twice
+        url = BookmarkableUrlHelper.registerClosedDock(url,
+                                                       dock1);
+        url = BookmarkableUrlHelper.registerClosedDock(url,
+                                                       dock1);
+        assertNotNull(url);
+        assertTrue(url.contains("!W" + dockName1));
+        // close another dock twice
+        url = BookmarkableUrlHelper.registerClosedDock(url,
+                                                       dock2);
+        url = BookmarkableUrlHelper.registerClosedDock(url,
+                                                       dock2);
+        assertNotNull(url);
+        assertTrue(url.contains("!W" + dockName2));
     }
 
     /**
@@ -353,7 +451,8 @@ public class BookmarkableUrlHelperTest extends TestCase {
      * @param perspectiveName
      * @return
      */
-    private UberfireDock createUberfireDockForTest(String dockName, String perspectiveName) {
+    private UberfireDock createUberfireDockForTest(String dockName,
+                                                   String perspectiveName) {
         final PlaceRequest req = new DefaultPlaceRequest(dockName);
         UberfireDock dock = new UberfireDock(
                 UberfireDockPosition.WEST,

@@ -92,6 +92,25 @@ public class BookmarkableUrlHelperTest extends TestCase {
     }
 
     @Test
+    public void testGetPerspectiveFromPlaceWithParams() {
+        final String perspectiveName = "eccePerspective";
+        final String bookmarkableUrl = perspectiveName
+                .concat("|~screen1,~screen2");
+        final PlaceRequest req = new DefaultPlaceRequest(bookmarkableUrl);
+
+        req.addParameter("param", "value");
+        PlaceRequest place = BookmarkableUrlHelper.getPerspectiveFromPlace(req);
+
+        assertNotNull(place);
+        assertNotSame(req,
+                      place);
+        StringBuilder expected = new StringBuilder(perspectiveName);
+        expected.append("?param=value");
+        assertEquals(expected.toString(),
+                     place.getFullIdentifier());
+    }
+
+    @Test
     public void testIsPerspectiveScreen() {
         final String url = "perspective|screen1,screen2$screen3,screen4";
 

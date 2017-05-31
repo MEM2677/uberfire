@@ -42,5 +42,4 @@ public interface UberfireDocks {
 
     UberfireDock getDockedScreenInPerspective(String perspective,
                                               String screen);
-
 }

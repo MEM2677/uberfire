@@ -1,3 +1,18 @@
+/*
+ * Copyright 2015 Red Hat, Inc. and/or its affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.uberfire.client.mvp;
 
 import java.util.Arrays;
@@ -7,31 +22,40 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.uberfire.client.workbench.docks.UberfireDock;
 import org.uberfire.mvp.PlaceRequest;
 
 /**
  * A bookmarkable URL has the following form:
  * <p>
- * http://127.0.0.1:8888/wires.html#WiresScratchPadPerspective|~WiresScratchPadScreen,WiresLayersScreen,~WiresActionsScreen,WiresPaletteScreen,~WiresPropertiesScreen$PagedTableScreen
+ * http://url/index.html#FWidgets|$PagedTableScreen[WSimpleDockScreen,],~WiresPropertiesScreen$PagedTableScreen
  * <p>
  * between the '#' and '|' there is the perspective name
  * between the '|' and '$' there is the CSV list of the screens opened when loading the perspective
+ * between the '[' and ']'there is the CSV list of the docked Screens
  * after the '$' there is the CSV list of the screens not belonging to the current perspective
  * <p>
- * '~' denotes a cosed screen
- * '!' indicates a docked screen
- *
+ * '~' denotes a closed screen
+ * <p>
  * In this unit we have the basic methods used to compose such URLs
- *
  */
 public class BookmarkableUrlHelper {
+
+    public final static String PERSPECTIVE_SEP = "|";
+    public final static String DOCK_BEGIN_SEP = "[";
+    public final static String DOCK_CLOSE_SEP = "]";
+    public final static String SEPARATOR = ",";
+    public final static String OTHER_SCREEN_SEP = "$";
+    public final static String CLOSED_PREFIX = "~";
+    public final static String CLOSED_DOCK_PREFIX = "!";
+    public final static int MAX_NAV_URL_SIZE = 1900;
 
     private static boolean isNotBlank(final String str) {
         return (str != null
                 && str.trim().length() > 0);
     }
-    private static boolean isNotBlank(final PlaceRequest place)
-    {
+
+    private static boolean isNotBlank(final PlaceRequest place) {
         return (null != place && isNotBlank(place.getFullIdentifier()));
     }
 
@@ -39,78 +63,85 @@ public class BookmarkableUrlHelper {
      * Add a screen to the bookmarkable URL. If the screen belongs to the currently opened
      * perspective we add it to the list between the '|' and '$', otherwise we add it
      * after the '$'.
-     *
+     * <p>
      * We add the '|' or the '$' when needed
      * @param bookmarkableUrl
-     * @param screenName
+     * @param placeRequest
      * @return
      */
     public static String registerOpenedScreen(String bookmarkableUrl,
-                                              final String screenName) {
+                                              final PlaceRequest placeRequest) {
+        String screenName = placeRequest.getFullIdentifier();
         String closedScreen = CLOSED_PREFIX.concat(screenName);
 
-        // if the length exceeds the max allowed size do nothing
-        if (isNotBlank(screenName) && isNotBlank(bookmarkableUrl) &&
-                bookmarkableUrl.length() + screenName.length() >= MAX_NAV_URL_SIZE) {
+        if (isBiggerThenMaxURLSize(bookmarkableUrl,
+                                   screenName)) {
             return bookmarkableUrl;
         }
 
-        // if the screen was closed
-        if (bookmarkableUrl.indexOf(closedScreen) != -1) {
+        if (screenWasClosed(bookmarkableUrl,
+                            closedScreen)) {
             bookmarkableUrl = bookmarkableUrl.replace(closedScreen,
                                                       screenName);
-        } else if (bookmarkableUrl.indexOf(screenName) > 0) {
-            // do nothing coz the screen is already present
         } else if (!isPerspectiveInUrl(bookmarkableUrl)) {
             // must add the screen in the group of the current perspective (which is not yet loaded)
             if (isNotBlank(bookmarkableUrl)) {
-                bookmarkableUrl = bookmarkableUrl.concat(SCREEN_SEP).concat(screenName);
+                bookmarkableUrl = bookmarkableUrl.concat(SEPARATOR).concat(screenName);
             } else {
                 bookmarkableUrl = screenName;
             }
         } else {
             // this is a screen outside the current perspective
             if (!urlContainsExtraPerspectiveScreen(bookmarkableUrl)) {
-                // add the '$' if needed
                 bookmarkableUrl = bookmarkableUrl.concat(OTHER_SCREEN_SEP).concat(screenName);
-            }
-            // otherwise append the screen after the last element
-            else {
-                bookmarkableUrl = bookmarkableUrl.concat(SCREEN_SEP).concat(screenName);
+            } else {
+                bookmarkableUrl = bookmarkableUrl.concat(SEPARATOR).concat(screenName);
             }
         }
         return bookmarkableUrl;
     }
 
+    private static boolean screenWasClosed(String bookmarkableUrl,
+                                           String closedScreen) {
+        return bookmarkableUrl.indexOf(closedScreen) != -1;
+    }
+
+    private static boolean isBiggerThenMaxURLSize(String bookmarkableUrl,
+                                                  String screenName) {
+        return isNotBlank(screenName) && isNotBlank(bookmarkableUrl) &&
+                bookmarkableUrl.length() + screenName.length() >= MAX_NAV_URL_SIZE;
+    }
+
     /**
-     * Update the bookmarkable URL, marking a screen closed. Basically if the screen belongs
+     * Update the bookmarkable URL, marking a screen or editor closed. Basically if the screen belongs
      * to the currently opened perspective the we prefix the screen with a '~'; if the
      * screen doesn't belong to the current perspective, that is, after the '$', the it
      * is simply removed.
-     *
+     * <p>
      * We remove the '$' when needed
      * @param screenName
      */
-    public static String registerClosedScreen(String bookmarkableUrl, final String screenName) {
-        final boolean isPerspective = isPerspectiveScreen(bookmarkableUrl, screenName);
+    public static String registerClose(String bookmarkableUrl,
+                                       final String screenName) {
+        final boolean isPerspective = isPerspectiveScreen(bookmarkableUrl,
+                                                          screenName);
         final String separator = isPerspective ? PERSPECTIVE_SEP : OTHER_SCREEN_SEP;
         final String closedScreen = CLOSED_PREFIX.concat(screenName);
         final String uniqueScreenAfterDelimiter =
                 separator.concat(screenName); // |screen or $screen
         final String firstScreenAfterDelimiter =
-                uniqueScreenAfterDelimiter.concat(SCREEN_SEP); // |screen, or $screen,
+                uniqueScreenAfterDelimiter.concat(SEPARATOR); // |screen, or $screen,
         final String commaSeparatedScreen =
-                screenName.concat(SCREEN_SEP); // screen,
+                screenName.concat(SEPARATOR); // screen,
 
-        // check screen already closed
-        if (isScreenClosed(bookmarkableUrl, closedScreen)) {
+        if (isScreenClosed(bookmarkableUrl,
+                           closedScreen)) {
             return bookmarkableUrl;
         }
         if (isPerspective) {
             bookmarkableUrl = bookmarkableUrl.replace(screenName,
                                                       closedScreen);
         } else {
-            // check for SEP + screen + ","
             if (bookmarkableUrl.contains(firstScreenAfterDelimiter)) {
                 bookmarkableUrl = bookmarkableUrl.replace(firstScreenAfterDelimiter,
                                                           separator);
@@ -142,7 +173,6 @@ public class BookmarkableUrlHelper {
                                                    url.indexOf(PERSPECTIVE_SEP));
             PlaceRequest copy = place.clone();
             copy.setIdentifier(perspectiveName);
-            // copy arguments
             if (!place.getParameters().isEmpty()) {
                 for (Map.Entry<String, String> elem : place.getParameters().entrySet()) {
                     copy.addParameter(elem.getKey(),
@@ -160,7 +190,7 @@ public class BookmarkableUrlHelper {
      * @return
      */
     public static boolean isPerspectiveScreen(final String bookmarkableUrl,
-                                        final String screen) {
+                                              final String screen) {
         return (isNotBlank(screen)
                 && (!urlContainsExtraPerspectiveScreen(bookmarkableUrl)
                 || (bookmarkableUrl.indexOf(OTHER_SCREEN_SEP) > bookmarkableUrl.indexOf(screen))));
@@ -183,35 +213,20 @@ public class BookmarkableUrlHelper {
     }
 
     /**
-     * Return true if the given screen is already closed.
-     * @param screen
-     * @return
-     */
-    public static boolean isScreenClosed(final String bookmarkableUrl,
-                                   String screen)
-    {
-        if (!screen.startsWith(CLOSED_PREFIX))
-        {
-            screen = CLOSED_PREFIX.concat(screen);
-        }
-        return (bookmarkableUrl.indexOf(screen) != -1);
-    }
-
-    /**
      * Given a screen name, this method extracts the corresponding token in the
      * URL, that is the screen name with optional parameters and markers
      * @param screen
      * @return
      */
     public static String getUrlToken(final String bookmarkableUrl,
-                               final String screen) {
+                                     final String screen) {
         int st = isPerspectiveInUrl(bookmarkableUrl) ? (bookmarkableUrl.indexOf(PERSPECTIVE_SEP) + 1) : 0;
         String screensList = bookmarkableUrl.replace(OTHER_SCREEN_SEP,
-                                                     SCREEN_SEP)
+                                                     SEPARATOR)
                 .substring(st,
                            bookmarkableUrl.length());
 
-        String tokens[] = screensList.split(SCREEN_SEP);
+        String tokens[] = screensList.split(SEPARATOR);
         Optional<String> token = Arrays.asList(tokens).stream()
                 .filter(s -> s.contains(screen))
                 .findFirst();
@@ -220,29 +235,82 @@ public class BookmarkableUrlHelper {
     }
 
     /**
+     * Return the docked screens in the URL
+     * @param url
+     * @return
+     */
+    public static Set<String> getDockedScreensFromUrl(final String url) {
+        int start;
+        int end;
+        String docks;
+
+        if (!isNotBlank(url)) {
+            return new HashSet<>();
+        }
+        start = url.indexOf(DOCK_BEGIN_SEP) + 1;
+        end = url.indexOf(DOCK_CLOSE_SEP) - 1;
+
+        if (start > 0) {
+            docks = url.substring(start,
+                                  end);
+            String[] token = docks.split(SEPARATOR);
+            return new HashSet<>(Arrays.asList(token));
+        }
+        return new HashSet<>();
+    }
+
+    /**
+     * Return all the docked screens
+     * @param place
+     * @return
+     * @note non-docked screens are not taken into consideration
+     */
+    public static Set<String> getDockedScreensFromPlace(final PlaceRequest place) {
+        if (null != place)
+        {
+            return getDockedScreensFromUrl(place.getFullIdentifier());
+        }
+        return new HashSet<>();
+    }
+
+    /**
      * Return all the screens (opened or closed) that is, everything
      * after the perspective declaration
      * @param place
      * @return
+     * @note docked screens are not taken into consideration
      */
     public static Set<String> getScreensFromPlace(final PlaceRequest place) {
         String url;
+        int start;
+        int end;
+        String docks;
 
         if (!isNotBlank(place)) {
-            return new HashSet<String>();
+            return new HashSet<>();
         }
         // get everything after the perspective
         if (isPerspectiveInUrl(place.getFullIdentifier())) {
             String request = place.getFullIdentifier();
 
             url = request.substring(request.indexOf(PERSPECTIVE_SEP) + 1);
-        }
-        else {
+        } else {
             url = place.getFullIdentifier();
         }
+
+        start = url.indexOf(DOCK_BEGIN_SEP);
+        end = url.indexOf(DOCK_CLOSE_SEP) + 1;
+        if (start > 0) {
+            docks = start > 0 ?
+                    url.substring(start,
+                                  end) : "";
+            url = url.replace(docks,
+                              "");
+        }
         // replace the '$' with a comma ','
-        url = url.replace(OTHER_SCREEN_SEP, SCREEN_SEP);
-        String[] token = url.split(SCREEN_SEP);
+        url = url.replace(OTHER_SCREEN_SEP,
+                          SEPARATOR);
+        String[] token = url.split(SEPARATOR);
         return new HashSet<>(Arrays.asList(token));
     }
 
@@ -272,12 +340,72 @@ public class BookmarkableUrlHelper {
         return result;
     }
 
+    /**
+     * Return true if the given screen is already closed.
+     * @param screen
+     * @return
+     * @note docked screens are ignored
+     */
+    public static boolean isScreenClosed(final String bookmarkableUrl,
+                                         String screen) {
+        if (!screen.startsWith(CLOSED_PREFIX)) {
+            screen = CLOSED_PREFIX.concat(screen);
+        }
+        return (bookmarkableUrl.indexOf(screen) != -1);
+    }
 
-    public final static String PERSPECTIVE_SEP = "|";
-    public final static String SCREEN_SEP = ",";
-    public final static String OTHER_SCREEN_SEP = "$";
-    public final static String CLOSED_PREFIX = "~";
-    public final static String DOCK_PREFIX = "!";
+    public static String registerOpenedPerspective(String currentBookmarkableURLStatus,
+                                                   PlaceRequest place) {
+        return place.getFullIdentifier().concat(PERSPECTIVE_SEP).concat(currentBookmarkableURLStatus);
+    }
 
-    public final static int MAX_NAV_URL_SIZE = 1900;
+    private static String getDockId(UberfireDock targetDock) {
+        return targetDock.getDockPosition().getShortName()
+                + targetDock.getPlaceRequest().getFullIdentifier() + SEPARATOR;
+    }
+
+    public static String registerOpenedDock(String currentBookmarkableURLStatus,
+                                            UberfireDock targetDock) {
+        if (!isNotBlank(currentBookmarkableURLStatus)
+                || null == targetDock) {
+            return currentBookmarkableURLStatus;
+        }
+        final String id = getDockId(targetDock);
+        final String closed = CLOSED_DOCK_PREFIX.concat(id);
+
+        if (currentBookmarkableURLStatus.contains(DOCK_CLOSE_SEP)) {
+            String result = null;
+
+            if (!currentBookmarkableURLStatus.contains(id)) {
+                // the screen is not in the URL, insert in last position
+                result = currentBookmarkableURLStatus.replace(DOCK_CLOSE_SEP,
+                                                            (id + DOCK_CLOSE_SEP));
+            } else if (currentBookmarkableURLStatus.contains(closed)) {
+                // the screen is closed
+                result = currentBookmarkableURLStatus.replace(closed,
+                                                              id);
+            } else {
+                // screen already in URL
+                result = currentBookmarkableURLStatus;
+            }
+            return result;
+        } else {
+            return currentBookmarkableURLStatus + DOCK_BEGIN_SEP + (getDockId(targetDock) + DOCK_CLOSE_SEP);
+        }
+    }
+
+    public static String registerClosedDock(String currentBookmarkableURLStatus,
+                                            UberfireDock targetDock) {
+        if (!isNotBlank(currentBookmarkableURLStatus)
+                || null == targetDock) {
+            return currentBookmarkableURLStatus;
+        }
+        final String id = getDockId(targetDock);
+        final String closed = CLOSED_DOCK_PREFIX.concat(id);
+        if (!currentBookmarkableURLStatus.contains(closed)) {
+            return currentBookmarkableURLStatus.replace(id,
+                                                        CLOSED_DOCK_PREFIX.concat(id));
+        }
+        return currentBookmarkableURLStatus;
+    }
 }

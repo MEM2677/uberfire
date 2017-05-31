@@ -30,7 +30,6 @@ import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 
-import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.user.client.ui.HasWidgets;
 import com.google.gwt.user.client.ui.IsWidget;
@@ -41,8 +40,6 @@ import org.jboss.errai.common.client.dom.HTMLElement;
 import org.jboss.errai.common.client.ui.ElementWrapperWidget;
 import org.jboss.errai.ioc.client.api.EnabledByProperty;
 import org.jboss.errai.ioc.client.api.SharedSingleton;
-import org.jboss.errai.ioc.client.container.SyncBeanDef;
-import org.jboss.errai.ioc.client.container.SyncBeanManager;
 import org.uberfire.backend.vfs.ObservablePath;
 import org.uberfire.backend.vfs.Path;
 import org.uberfire.client.menu.SplashScreenMenuPresenter;
@@ -50,8 +47,6 @@ import org.uberfire.client.mvp.ActivityLifecycleError.LifecyclePhase;
 import org.uberfire.client.workbench.LayoutSelection;
 import org.uberfire.client.workbench.PanelManager;
 import org.uberfire.client.workbench.WorkbenchLayout;
-import org.uberfire.client.workbench.docks.UberfireDock;
-import org.uberfire.client.workbench.docks.UberfireDocks;
 import org.uberfire.client.workbench.events.BeforeClosePlaceEvent;
 import org.uberfire.client.workbench.events.ClosePlaceEvent;
 import org.uberfire.client.workbench.events.NewSplashScreenActiveEvent;
@@ -130,28 +125,13 @@ public class PlaceManagerImpl
     private WorkbenchLayout workbenchLayout;
     @Inject
     private LayoutSelection layoutSelection;
-    @Inject
-    private SyncBeanManager iocManager;
-    // do not @Inject this!
-    private UberfireDocks uberfireDocks;
-
 
     @PostConstruct
     public void initPlaceHistoryHandler() {
-        getPlaceHistoryHandler().registerOpen(this,
-                                              produceEventBus(),
-                                              DefaultPlaceRequest.NOWHERE);
-
+        getPlaceHistoryHandler().initialize(this,
+                                          produceEventBus(),
+                                          DefaultPlaceRequest.NOWHERE);
         workbenchLayout = layoutSelection.get();
-
-        // get the UberfireDocks bean (if any)
-        if (null != iocManager) {
-            SyncBeanDef<UberfireDocks> dockBean = iocManager.lookupBean(UberfireDocks.class);
-
-            if (null != dockBean) {
-                uberfireDocks = dockBean.getInstance();
-            }
-        }
     }
 
     private PlaceHistoryHandler getPlaceHistoryHandler() {
@@ -220,7 +200,6 @@ public class PlaceManagerImpl
     @Override
     public void goTo(PlaceRequest place,
                      HasWidgets addTo) {
-        GWT.log("--0--");
         goToTargetPanel(place,
                         panelManager.addCustomPanel(addTo,
                                                     UnanchoredStaticWorkbenchPanelPresenter.class.getName()));
@@ -250,29 +229,13 @@ public class PlaceManagerImpl
         }
     }
 
-    private void goTo(final PlaceRequest request,
+    private void goTo(final PlaceRequest place,
                       final PanelDefinition panel,
                       final Command doWhenFinished) {
-        if (request == null || request.equals(DefaultPlaceRequest.NOWHERE)) {
+        if (place == null || place.equals(DefaultPlaceRequest.NOWHERE)) {
             return;
         }
-        final Activity currentActivity = perspectiveManager.getCurrentPerspective();
-
-        // matteo
-        final PlaceRequest place = placeHistoryHandler.getPerspectiveFromPlace(request);
         final ResolvedRequest resolved = resolveActivity(place);
-
-        if (null != currentActivity
-                && null != currentActivity.getPlace()) {
-//            GWT.log("request: " + request.getFullIdentifier());
-//            GWT.log("place: " + place.getFullIdentifier());
-//            GWT.log("current activity: " + currentActivity.getPlace().getFullIdentifier());
-
-            if (currentActivity.getPlace().getFullIdentifier().equals(place.getIdentifier())) {
-                // do nothing if the perspective is the same
-                return;
-            }
-        }
 
         if (resolved.getActivity() != null) {
             final Activity activity = resolved.getActivity();
@@ -304,92 +267,15 @@ public class PlaceManagerImpl
                                     (PopupActivity) activity);
                 doWhenFinished.execute();
             } else if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
-
-                GWT.log("--- perspective start ---");
-                // clean the URL
                 placeHistoryHandler.flush();
-
-                // Matteo we are about to switch to a perspective
                 launchPerspectiveActivity(place,
                                           (PerspectiveActivity) activity,
                                           doWhenFinished);
-
-                /*
-                 *  track the perspective - this placing is strategic as we know that all the
-                 *  screens previously opened belong to the current perspective
-                 */
-                boolean isDock = isScreenDocked(activity,
-                                                place);
-                placeHistoryHandler.registerOpen(activity,
-                                                 place,
-                                                 isDock);
-
-                // matteo in this point perspective is loaded and all default screen are open
-                GWT.log("--- perspective stop --");
             }
         } else {
             goTo(resolved.getPlaceRequest(),
                  panel,
                  doWhenFinished);
-        }
-    }
-
-    /**
-     * Restore the screen as taken from the URL
-     * @param screenName
-     */
-    public void restoreScreens(final String screenName) {
-        if (null == screenName
-                || 0 == screenName.trim().length())
-        {
-            return;
-        }
-
-        final boolean isCloseOperation = screenName.startsWith(placeHistoryHandler.CLOSED_PREFIX);
-        final String screenElement = isCloseOperation ? screenName.substring(1) : screenName;
-        final boolean isDockedScreen = screenElement.startsWith(placeHistoryHandler.DOCK_PREFIX);
-        final String screenId = isDockedScreen ? screenElement.substring(1) : screenElement;
-
-        GWT.log("processing screen: " + screenId + " close: " + isCloseOperation + " docked: " + isDockedScreen);
-//        GWT.log("screenId: " + screenId);
-
-        if (isDockedScreen)
-        {
-            toggleDock(screenId, !isCloseOperation);
-        }
-        else
-        {
-            if (isCloseOperation) {
-                closePlace(screenId);
-            }
-            else
-            {
-                goTo(screenId);
-            }
-        }
-    }
-
-    /**
-     * Expand or collapse (hide) the desired dock in the current perspective
-     * @param dockName
-     * @param open
-     */
-    private void toggleDock(final String dockName, final boolean open)
-    {
-        final Activity currentActivity = perspectiveManager.getCurrentPerspective();
-
-        if (null != currentActivity
-                && null != currentActivity.getIdentifier()) {
-            String perspectiveName = currentActivity.getIdentifier();
-            UberfireDock dock = uberfireDocks.getDockedScreenInPerspective(perspectiveName,
-                                                                           dockName);
-            if (null != dock) {
-                if (open) {
-                    uberfireDocks.expand(dock);
-                } else {
-                    closePlace(dock.getPlaceRequest());
-                }
-            }
         }
     }
 
@@ -449,6 +335,7 @@ public class PlaceManagerImpl
         }
 
         final Set<Activity> activities = activityManager.getActivities(resolvedPlaceRequest);
+
         if (activities == null || activities.size() == 0) {
             final PlaceRequest notFoundPopup = new DefaultPlaceRequest("workbench.activity.notfound");
             notFoundPopup.addParameter("requestedPlaceIdentifier",
@@ -458,7 +345,6 @@ public class PlaceManagerImpl
                 return new ResolvedRequest(null,
                                            notFoundPopup);
             } else {
-                // matteo unknown activity
                 final PlaceRequest ufNotFoundPopup = new DefaultPlaceRequest("uf.workbench.activity.notfound");
                 ufNotFoundPopup.addParameter("requestedPlaceIdentifier",
                                              place.getIdentifier());
@@ -829,16 +715,6 @@ public class PlaceManagerImpl
         visibleWorkbenchParts.put(place,
                                   part);
 
-        getPlaceHistoryHandler().onPlaceChange(place);
-
-        // added by matteo
-//        GWT.log(">> " + activity.getResourceType().getName()); // Matteo
-        boolean isDock = isScreenDocked(activity,
-                                        place);
-        getPlaceHistoryHandler().registerOpen(activity,
-                                              place,
-                                              isDock);
-
         final IsWidget titleDecoration = maybeWrapExternalWidget(activity,
                                                                  () -> activity.getTitleDecorationElement(),
                                                                  () -> activity.getTitleDecoration());
@@ -863,6 +739,8 @@ public class PlaceManagerImpl
 
         try {
             activity.onOpen();
+            getPlaceHistoryHandler().registerOpen(activity,
+                                                  place);
         } catch (Exception ex) {
             lifecycleErrorHandler.handle(activity,
                                          LifecyclePhase.OPEN,
@@ -890,19 +768,14 @@ public class PlaceManagerImpl
             return;
         }
 
-        getPlaceHistoryHandler().onPlaceChange(place);
-        // modified by Matteo
-        boolean isDock = isScreenDocked(activity,
-                                        place);
-        getPlaceHistoryHandler().registerOpen(activity,
-                                              place,
-                                              isDock);
 
         activePopups.put(place.getIdentifier(),
                          activity);
 
         try {
             activity.onOpen();
+            getPlaceHistoryHandler().registerOpen(activity,
+                                                  place);
         } catch (Exception ex) {
             activePopups.remove(place.getIdentifier());
             lifecycleErrorHandler.handle(activity,
@@ -921,8 +794,6 @@ public class PlaceManagerImpl
     private void launchPerspectiveActivity(final PlaceRequest request,
                                            final PerspectiveActivity activity,
                                            final Command doWhenFinished) {
-
-        // process the URL to extract the perspective definition
         final PlaceRequest place = placeHistoryHandler.getPerspectiveFromPlace(request);
 
         checkNotNull("doWhenFinished",
@@ -984,6 +855,8 @@ public class PlaceManagerImpl
                                                 openPartsRecursively(perspectiveDef.getRoot());
                                                 doWhenFinished.execute();
                                                 workbenchLayout.onResize();
+                                                placeHistoryHandler.registerOpen(activity,
+                                                                                 place);
                                             }
                                         });
                 }
@@ -1019,12 +892,9 @@ public class PlaceManagerImpl
      * Opens all the parts of the given panel and its subpanels. This is a subroutine of the perspective switching
      * process.
      */
-    private void openPartsRecursively(PanelDefinition panel) { // Matteo
-        // Matteo Investigate how this works
-        // Load the definition and perform a goto for each def - only for the NWSE perspective
+    private void openPartsRecursively(PanelDefinition panel) {
         for (PartDefinition part : ensureIterable(panel.getParts())) {
             final PlaceRequest place = part.getPlace().clone();
-
             part.setPlace(place);
             goTo(part,
                  panel);
@@ -1078,13 +948,8 @@ public class PlaceManagerImpl
             }
         }
 
-        // modified by Matteo
-        boolean isDock = isScreenDocked(activity,
-                                        place);
         getPlaceHistoryHandler().registerClose(activity,
-                                               place,
-                                               isDock);
-
+                                               place);
         workbenchPartCloseEvent.fire(new ClosePlaceEvent(place));
 
         panelManager.removePartForPlace(place);
@@ -1102,38 +967,6 @@ public class PlaceManagerImpl
         if (place instanceof PathPlaceRequest) {
             ((PathPlaceRequest) place).getPath().dispose();
         }
-    }
-
-    /**
-     * Check whether the current screen is docked
-     * @param screenName
-     * @return
-     */
-    private boolean isScreenDocked(String screenName)
-    {
-        Activity currentActivity = perspectiveManager.getCurrentPerspective();
-        String perspectiveName = currentActivity.getIdentifier();
-        boolean isDocked = (null != uberfireDocks
-                && uberfireDocks.isScreenDockedInPerspective(perspectiveName,
-                                                          screenName));
-        return isDocked;
-    }
-
-
-    /**
-     * Check whether the current screen is docked
-     * @param place
-     * @return
-     */
-    private boolean isScreenDocked(Activity activity,
-                                   PlaceRequest place) {
-        boolean isDocked = false;
-
-        if (null != uberfireDocks
-                && activity.isType(ActivityResourceType.SCREEN.name())) {
-            isDocked = isScreenDocked(place.getIdentifier());
-        }
-        return isDocked;
     }
 
     private boolean canClosePlace(final PlaceRequest place) {

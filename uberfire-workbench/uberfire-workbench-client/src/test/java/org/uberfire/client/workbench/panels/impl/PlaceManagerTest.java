@@ -111,15 +111,12 @@ public class PlaceManagerTest {
      */
     private final PanelDefinition rootPanel = new PanelDefinitionImpl(
             MultiListWorkbenchPanelPresenter.class.getName());
-
-    // Matteo
     @Mock
     PerspectiveActivity defaultPerspective;
     @Mock
     SyncBeanManager iocManager;
     @Mock
     UberfireDocks uberfireDock;
-
     @Mock
     Event<BeforeClosePlaceEvent> workbenchPartBeforeCloseEvent;
     @Mock
@@ -142,7 +139,6 @@ public class PlaceManagerTest {
     WorkbenchLayout workbenchLayout;
     @Mock
     LayoutSelection layoutSelection;
-
     /**
      * This is the thing we're testing. Weeee!
      */
@@ -153,7 +149,6 @@ public class PlaceManagerTest {
     public void setup() {
         ((SyncBeanManagerImpl) IOC.getBeanManager()).reset();
 
-        // Matteo
         when(placeHistoryHandler.getPerspectiveFromPlace(any())).then(AdditionalAnswers.returnsFirstArg());
 
         when(defaultPerspective.getIdentifier())
@@ -163,13 +158,9 @@ public class PlaceManagerTest {
         when(perspectiveManager.getCurrentPerspective())
                 .thenReturn(defaultPerspective);
 
-
         when(uberfireDock.isScreenDockedInPerspective(any(String.class),
                                                       any(String.class)))
                 .thenReturn(false);
-
-
-
         when(activityManager.getActivities(any(PlaceRequest.class))).thenReturn(singleton(notFoundActivity));
 
         // for now (and this will have to change for UF-61), PathPlaceRequest performs an IOC lookup for ObservablePath in its constructor
@@ -200,10 +191,10 @@ public class PlaceManagerTest {
         when(kansasActivity.onMayClose()).thenReturn(true);
         when(kansasActivity.preferredWidth()).thenReturn(123);
         when(kansasActivity.preferredHeight()).thenReturn(456);
-        // Matteo
-        when(placeHistoryHandler.getPerspectiveFromPlace(any()))
-                .thenAnswer(i -> i.getArgumentAt(0, PlaceRequest.class));
 
+        when(placeHistoryHandler.getPerspectiveFromPlace(any()))
+                .thenAnswer(i -> i.getArgumentAt(0,
+                                                 PlaceRequest.class));
         // arrange for the mock PerspectiveManager to invoke the doWhenFinished callbacks
         doAnswer(new Answer<Void>() {
             @SuppressWarnings({"rawtypes", "unchecked"})
@@ -217,7 +208,6 @@ public class PlaceManagerTest {
         }).when(perspectiveManager).switchToPerspective(any(PlaceRequest.class),
                                                         any(PerspectiveActivity.class),
                                                         any(ParameterizedCommand.class));
-
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock invocation) throws Throwable {
@@ -226,8 +216,6 @@ public class PlaceManagerTest {
                 return null;
             }
         }).when(perspectiveManager).savePerspectiveState(any(Command.class));
-
-        // Matteo
         doReturn(new DefaultPlaceRequest("lastPlaceRequest"))
                 .when(defaultPerspective).getPlace();
         doReturn(defaultPerspective).when(perspectiveManager)
@@ -274,9 +262,9 @@ public class PlaceManagerTest {
     public void testPlaceManagerGetsInitializedToADefaultPlace() throws Exception {
         placeManager.initPlaceHistoryHandler();
 
-        verify(placeHistoryHandler).registerOpen(any(PlaceManager.class),
-                                                 any(EventBus.class),
-                                                 any(PlaceRequest.class));
+        verify(placeHistoryHandler).initialize(any(PlaceManager.class),
+                                             any(EventBus.class),
+                                             any(PlaceRequest.class));
     }
 
     @Test
@@ -337,7 +325,6 @@ public class PlaceManagerTest {
         verifyActivityLaunchSideEffects(oz,
                                         ozActivity,
                                         null);
-
     }
 
     @Test
@@ -352,8 +339,6 @@ public class PlaceManagerTest {
         verifyNoActivityLaunchSideEffects(kansas,
                                           kansasActivity);
     }
-
-
 
     @Test
     public void testGoToPartWeAreAlreadyAt() throws Exception {
@@ -818,8 +803,6 @@ public class PlaceManagerTest {
                never()).onStartup(any(PlaceRequest.class));
         verify(popupActivity,
                times(1)).onOpen();
-        verify(placeHistoryHandler,
-               times(1)).onPlaceChange(popupPlace);
 
         assertEquals(PlaceStatus.OPEN,
                      placeManager.getStatus(popupPlace));
@@ -843,8 +826,6 @@ public class PlaceManagerTest {
                never()).onStartup(any(PlaceRequest.class));
         verify(popupActivity,
                times(1)).onOpen();
-        verify(placeHistoryHandler,
-               times(1)).onPlaceChange(popupPlace);
         assertEquals(PlaceStatus.OPEN,
                      placeManager.getStatus(popupPlace));
     }
@@ -1138,7 +1119,6 @@ public class PlaceManagerTest {
     public void testCloseAllPlacesOrNothingSucceeds() throws Exception {
         PlaceRequest emeraldCityPlace = new DefaultPlaceRequest("emerald_city");
         WorkbenchScreenActivity emeraldCityActivity = createWorkbenchScreenActivity(emeraldCityPlace);
-
         placeManager.goTo(emeraldCityPlace);
 
         when(kansasActivity.onMayClose()).thenReturn(true);
@@ -1154,11 +1134,9 @@ public class PlaceManagerTest {
 
     @Test
     public void testCloseAllPlacesOrNothingFails() throws Exception {
-
         PlaceRequest emeraldCityPlace = new DefaultPlaceRequest("emerald_city");
         WorkbenchScreenActivity emeraldCityActivity = createWorkbenchScreenActivity(emeraldCityPlace);
         doReturn(false).when(emeraldCityActivity).onMayClose();
-
         placeManager.goTo(emeraldCityPlace);
 
         when(kansasActivity.onMayClose()).thenReturn(true);
@@ -1272,9 +1250,6 @@ public class PlaceManagerTest {
                                               eq(expectedPartWidth),
                                               eq(expectedPartHeight));
 
-        // contract between PlaceManager and PlaceHistoryHandler
-        verify(placeHistoryHandler).onPlaceChange(placeRequest);
-
         // state changes in PlaceManager itself (contract between PlaceManager and everyone)
         assertTrue("Actual place requests: " + placeManager.getActivePlaceRequests(),
                    placeManager.getActivePlaceRequests().contains(placeRequest));
@@ -1319,10 +1294,6 @@ public class PlaceManagerTest {
                never()).addWorkbenchPanel(eq(panelManager.getRoot()),
                                           any(PanelDefinition.class),
                                           any(Position.class));
-
-        // contract between PlaceManager and PlaceHistoryHandler
-        verify(placeHistoryHandler,
-               never()).onPlaceChange(any(PlaceRequest.class));
 
         // state changes in PlaceManager itself (contract between PlaceManager and everyone)
         assertTrue(

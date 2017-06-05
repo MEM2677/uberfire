@@ -71,13 +71,10 @@ public class BookmarkableUrlHelper {
      */
     public static String registerOpenedScreen(String bookmarkableUrl,
                                               final PlaceRequest placeRequest) {
-        String screenName = placeRequest.getFullIdentifier();
-        String closedScreen = CLOSED_PREFIX.concat(screenName);
+        final String screenName = placeRequest.getFullIdentifier();
+        final String closedScreen = CLOSED_PREFIX.concat(screenName);
+        final String currentBookmarkableUrl = bookmarkableUrl;
 
-        if (isBiggerThenMaxURLSize(bookmarkableUrl,
-                                   screenName)) {
-            return bookmarkableUrl;
-        }
 
         if (screenWasClosed(bookmarkableUrl,
                             closedScreen)) {
@@ -98,6 +95,9 @@ public class BookmarkableUrlHelper {
                 bookmarkableUrl = bookmarkableUrl.concat(SEPARATOR).concat(screenName);
             }
         }
+        if (isBiggerThenMaxURLSize(bookmarkableUrl)) {
+            return currentBookmarkableUrl;
+        }
         return bookmarkableUrl;
     }
 
@@ -106,10 +106,9 @@ public class BookmarkableUrlHelper {
         return bookmarkableUrl.indexOf(closedScreen) != -1;
     }
 
-    private static boolean isBiggerThenMaxURLSize(String bookmarkableUrl,
-                                                  String screenName) {
-        return isNotBlank(screenName) && isNotBlank(bookmarkableUrl) &&
-                bookmarkableUrl.length() + screenName.length() >= MAX_NAV_URL_SIZE;
+    private static boolean isBiggerThenMaxURLSize(String bookmarkableUrl) {
+        return isNotBlank(bookmarkableUrl) &&
+                bookmarkableUrl.length() >= MAX_NAV_URL_SIZE;
     }
 
     /**

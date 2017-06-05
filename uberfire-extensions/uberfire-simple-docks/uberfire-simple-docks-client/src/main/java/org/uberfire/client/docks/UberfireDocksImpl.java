@@ -80,8 +80,7 @@ public class UberfireDocksImpl implements UberfireDocks {
         UberfireDock res = null;
         List<UberfireDock> docks = docksPerPerspective.get(perspective);
 
-        if (null != docks
-                && !docks.isEmpty()) {
+        if (null != docks) {
             res = docks.stream()
                     .filter(s -> s.getPlaceRequest().getIdentifier().equals(screen))
                     .findFirst()

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.uberfire.client.workbench.panels.impl;
+package org.uberfire.client.mvp;
 
 import java.util.Set;
 

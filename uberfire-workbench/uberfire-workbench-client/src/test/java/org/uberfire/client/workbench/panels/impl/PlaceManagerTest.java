@@ -1250,6 +1250,7 @@ public class PlaceManagerTest {
                                               eq(expectedPartWidth),
                                               eq(expectedPartHeight));
 
+
         // state changes in PlaceManager itself (contract between PlaceManager and everyone)
         assertTrue("Actual place requests: " + placeManager.getActivePlaceRequests(),
                    placeManager.getActivePlaceRequests().contains(placeRequest));

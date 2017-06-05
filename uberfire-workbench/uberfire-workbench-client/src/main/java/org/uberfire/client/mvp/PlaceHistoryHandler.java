@@ -93,6 +93,7 @@ public class PlaceHistoryHandler {
     public String getCurrentBookmarkableURLStatus() {
         return currentBookmarkableURLStatus;
     }
+
     private void handleHistoryToken(String token) {
 
         PlaceRequest newPlaceRequest = null;

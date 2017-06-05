@@ -218,7 +218,7 @@ public class Workbench {
     {
         String req = Window.Location.getHref();
         return (null != req && URL.decode(req)
-                .contains(placeHistoryHandler.PERSPECTIVE_SEP));
+                .contains(BookmarkableUrlHelper.PERSPECTIVE_SEP));
     }
 
     private void bootstrap() {

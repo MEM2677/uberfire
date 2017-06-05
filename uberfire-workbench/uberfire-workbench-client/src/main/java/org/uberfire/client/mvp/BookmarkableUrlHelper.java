@@ -71,13 +71,9 @@ public class BookmarkableUrlHelper {
      */
     public static String registerOpenedScreen(String bookmarkableUrl,
                                               final PlaceRequest placeRequest) {
-        String screenName = placeRequest.getFullIdentifier();
-        String closedScreen = CLOSED_PREFIX.concat(screenName);
-
-        if (isBiggerThenMaxURLSize(bookmarkableUrl,
-                                   screenName)) {
-            return bookmarkableUrl;
-        }
+        final String screenName = placeRequest.getFullIdentifier();
+        final String closedScreen = CLOSED_PREFIX.concat(screenName);
+        final String currentBookmarkableUrl = bookmarkableUrl;
 
         if (screenWasClosed(bookmarkableUrl,
                             closedScreen)) {
@@ -98,6 +94,9 @@ public class BookmarkableUrlHelper {
                 bookmarkableUrl = bookmarkableUrl.concat(SEPARATOR).concat(screenName);
             }
         }
+        if (isBiggerThenMaxURLSize(bookmarkableUrl)) {
+            return currentBookmarkableUrl;
+        }
         return bookmarkableUrl;
     }
 
@@ -106,10 +105,9 @@ public class BookmarkableUrlHelper {
         return bookmarkableUrl.indexOf(closedScreen) != -1;
     }
 
-    private static boolean isBiggerThenMaxURLSize(String bookmarkableUrl,
-                                                  String screenName) {
-        return isNotBlank(screenName) && isNotBlank(bookmarkableUrl) &&
-                bookmarkableUrl.length() + screenName.length() >= MAX_NAV_URL_SIZE;
+    private static boolean isBiggerThenMaxURLSize(String bookmarkableUrl) {
+        return isNotBlank(bookmarkableUrl) &&
+                bookmarkableUrl.length() >= MAX_NAV_URL_SIZE;
     }
 
     /**
@@ -151,9 +149,6 @@ public class BookmarkableUrlHelper {
             } else if (bookmarkableUrl.contains(commaSeparatedScreen)) {
                 bookmarkableUrl = bookmarkableUrl.replace(commaSeparatedScreen,
                                                           "");
-            } else {
-                bookmarkableUrl = bookmarkableUrl.replace(screenName,
-                                                          "");
             }
         }
         return bookmarkableUrl;
@@ -192,6 +187,7 @@ public class BookmarkableUrlHelper {
     public static boolean isPerspectiveScreen(final String bookmarkableUrl,
                                               final String screen) {
         return (isNotBlank(screen)
+                && isNotBlank(bookmarkableUrl)
                 && (!urlContainsExtraPerspectiveScreen(bookmarkableUrl)
                 || (bookmarkableUrl.indexOf(OTHER_SCREEN_SEP) > bookmarkableUrl.indexOf(screen))));
     }
@@ -266,8 +262,7 @@ public class BookmarkableUrlHelper {
      * @note non-docked screens are not taken into consideration
      */
     public static Set<String> getDockedScreensFromPlace(final PlaceRequest place) {
-        if (null != place)
-        {
+        if (null != place) {
             return getDockedScreensFromUrl(place.getFullIdentifier());
         }
         return new HashSet<>();
@@ -301,9 +296,8 @@ public class BookmarkableUrlHelper {
         start = url.indexOf(DOCK_BEGIN_SEP);
         end = url.indexOf(DOCK_CLOSE_SEP) + 1;
         if (start > 0) {
-            docks = start > 0 ?
-                    url.substring(start,
-                                  end) : "";
+            docks = url.substring(start,
+                                  end);
             url = url.replace(docks,
                               "");
         }
@@ -379,7 +373,7 @@ public class BookmarkableUrlHelper {
             if (!currentBookmarkableURLStatus.contains(id)) {
                 // the screen is not in the URL, insert in last position
                 result = currentBookmarkableURLStatus.replace(DOCK_CLOSE_SEP,
-                                                            (id + DOCK_CLOSE_SEP));
+                                                              (id + DOCK_CLOSE_SEP));
             } else if (currentBookmarkableURLStatus.contains(closed)) {
                 // the screen is closed
                 result = currentBookmarkableURLStatus.replace(closed,

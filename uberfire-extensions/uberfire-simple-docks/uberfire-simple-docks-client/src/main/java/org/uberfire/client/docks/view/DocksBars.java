@@ -237,6 +237,7 @@ public class DocksBars {
         placeManager.goTo(placeRequest,
                           expandedBar.targetPanel());
     }
+
     private void lookUpContextMenus(PlaceRequest placeRequest,
                                     DocksExpandedBar expandedBar) {
         Activity activity = placeManager.getActivity(placeRequest);
@@ -278,6 +279,7 @@ public class DocksBars {
                         expand(docksBar.getCollapsedBar());
                     }
                     uberfireDocksContainer.resize();
+                    ;
                     dockInteractionEvent.fire(new UberfireDocksInteractionEvent(targetDock,
                                                                                 UberfireDocksInteractionEvent.InteractionType.DESELECTED));
                 }

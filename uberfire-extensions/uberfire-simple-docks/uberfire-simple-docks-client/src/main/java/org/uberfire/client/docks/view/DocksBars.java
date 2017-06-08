@@ -279,7 +279,6 @@ public class DocksBars {
                         expand(docksBar.getCollapsedBar());
                     }
                     uberfireDocksContainer.resize();
-                    ;
                     dockInteractionEvent.fire(new UberfireDocksInteractionEvent(targetDock,
                                                                                 UberfireDocksInteractionEvent.InteractionType.DESELECTED));
                 }

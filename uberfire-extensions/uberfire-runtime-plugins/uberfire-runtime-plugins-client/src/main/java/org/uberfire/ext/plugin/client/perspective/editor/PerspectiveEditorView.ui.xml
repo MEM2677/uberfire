@@ -20,12 +20,18 @@
 
   <ui:style>
     .content {
-      margin: 20px 20px;
+      height: 100%;
+      background: linear-gradient(#f6f6f6 18px, transparent 18px) 0 -2px, linear-gradient(90deg, #f6f6f6 18px, transparent 0px) -2px 0;
+      background-color: #bbbbbb;
+      background-size: 20px 20px;
+    }
+    .layout{
+      height: 100%;
     }
   </ui:style>
 
   <g:HTMLPanel addStyleNames="{style.content}">
-    <g:FlowPanel ui:field="layoutEditor" />
+    <g:FlowPanel ui:field="layoutEditor" addStyleNames="{style.layout}" />
   </g:HTMLPanel>
 </ui:UiBinder>
 

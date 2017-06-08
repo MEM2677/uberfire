@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -64,6 +65,7 @@ import org.uberfire.mvp.impl.DefaultPlaceRequest;
 import org.uberfire.mvp.impl.ForcedPlaceRequest;
 import org.uberfire.mvp.impl.PathPlaceRequest;
 import org.uberfire.workbench.model.ActivityResourceType;
+import org.uberfire.workbench.model.CustomPanelDefinition;
 import org.uberfire.workbench.model.PanelDefinition;
 import org.uberfire.workbench.model.PartDefinition;
 import org.uberfire.workbench.model.PerspectiveDefinition;
@@ -94,7 +96,7 @@ public class PlaceManagerImpl
     /**
      * Custom panels we have opened but not yet closed.
      */
-    private final Map<PlaceRequest, PanelDefinition> customPanels = new HashMap<PlaceRequest, PanelDefinition>();
+    private final Map<PlaceRequest, CustomPanelDefinition> customPanels = new HashMap<>();
 
     private final Map<PlaceRequest, Command> onOpenCallbacks = new HashMap<PlaceRequest, Command>();
     /**
@@ -201,6 +203,7 @@ public class PlaceManagerImpl
     @Override
     public void goTo(PlaceRequest place,
                      HasWidgets addTo) {
+        closeOpenPlacesAt(panelsOfThisHasWidgets(addTo));
         goToTargetPanel(place,
                         panelManager.addCustomPanel(addTo,
                                                     UnanchoredStaticWorkbenchPanelPresenter.class.getName()));
@@ -209,13 +212,29 @@ public class PlaceManagerImpl
     @Override
     public void goTo(PlaceRequest place,
                      HTMLElement addTo) {
+        closeOpenPlacesAt(panelsOfThisHTMLElement(addTo));
         goToTargetPanel(place,
                         panelManager.addCustomPanel(addTo,
                                                     UnanchoredStaticWorkbenchPanelPresenter.class.getName()));
     }
 
+    private void closeOpenPlacesAt(Predicate<CustomPanelDefinition> filterPanels) {
+        customPanels.values().stream()
+                .filter(filterPanels)
+                .flatMap(p -> p.getParts().stream())
+                .forEach(part -> closePlace(part.getPlace()));
+    }
+
+    private Predicate<CustomPanelDefinition> panelsOfThisHTMLElement(HTMLElement addTo) {
+        return p -> p.getHtmlElementContainer().isPresent() && p.getHtmlElementContainer().get().equals(addTo);
+    }
+
+    private Predicate<CustomPanelDefinition> panelsOfThisHasWidgets(HasWidgets addTo) {
+        return p -> p.getHasWidgetsContainer().isPresent() && p.getHasWidgetsContainer().get().equals(addTo);
+    }
+
     private void goToTargetPanel(final PlaceRequest place,
-                                 final PanelDefinition adoptedPanel) {
+                                 final CustomPanelDefinition adoptedPanel) {
         if (existingWorkbenchActivities.containsKey(place)) {
             // if already open, behaviour is to select the place where it already lives
             goTo(place,
@@ -257,7 +276,8 @@ public class PlaceManagerImpl
                          });
                     return;
                 }
-
+                // matteo
+                GWT.log("MATTEO - " + place.getIdentifier());
                 launchWorkbenchActivityAtPosition(resolved.getPlaceRequest(),
                                                   workbenchActivity,
                                                   workbenchActivity.getDefaultPosition(),
@@ -291,36 +311,39 @@ public class PlaceManagerImpl
             return;
         }
 
-
-        final boolean isCloseOperation = screenName.startsWith(BookmarkableUrlHelper.CLOSED_PREFIX);
-        final String screenElement = isCloseOperation ? screenName.substring(1) : screenName;
-        final boolean isDockedScreen = screenElement.startsWith("!");
-        final String screenId = isDockedScreen ? screenElement.substring(1) : screenElement;
-
-        GWT.log("processing screen: " + screenName + "close: " + isCloseOperation + " docked: " + isDockedScreen);
-//        GWT.log("screenId: " + screenId);
-
-        if (isDockedScreen)
-        {
-            if (!isCloseOperation)
-            {
-
-            } else {
-
-            }
-        }
-        else
-        {
-            if (isCloseOperation) {
-                closePlace(screenId);
-            }
-            else
-            {
-                goTo(screenId);
-            }
-        }
+//        final boolean isCloseOperation = screenName.startsWith(BookmarkableUrlHelper.CLOSED_PREFIX);
+//        final String screenElement = isCloseOperation ? screenName.substring(1) : screenName;
+//        final boolean isDockedScreen = screenElement.startsWith(BookmarkableUrlHelper.DOCK_PREFIX);
+//        final String screenId = isDockedScreen ? screenElement.substring(1) : screenElement;
+//
+//        GWT.log("processing screen: " + screenName + "close: " + isCloseOperation + " docked: " + isDockedScreen);
+////        GWT.log("screenId: " + screenId);
+//
+//        if (isDockedScreen)
+//        {
+//            toggleDock(screenId, !isCloseOperation);
+//        }
+//        else
+//        {
+//            if (isCloseOperation) {
+//                closePlace(screenId);
+//            }
+//            else
+//            {
+//                goTo(screenId);
+//            }
+//        }
     }
 
+    /**
+     * Expand or collapse (hide) the desired dock in the current perspective
+     * @param dockName
+     * @param open
+     */
+    private void toggleDock(final String dockName, final boolean open)
+    {
+
+    }
 
     private boolean closePlaces(final Collection<PlaceRequest> placeRequests) {
         boolean result = true;
@@ -353,7 +376,7 @@ public class PlaceManagerImpl
      * special "not found" or "too many" place requests when the resolution doesn't work.
      * <p>
      * The behaviour of this method is affected by the boolean-valued
-     * {@code org.uberfire.client.mvp.PlaceManagerImpl.ignoreUnkownPlaces} property in {@link UberFirePreferences}.
+     * {@code org.uberfire.client.mvp.PlaceManagerImpl.ignoreUnkownPlaces} property in {@link UberfirePreferences}.
      * @param place A non-null place request that could have originated from within application code, from within the
      * framework, or by parsing a hash fragment from a browser history event.
      * @return a non-null ResolvedRequest, where:
@@ -830,14 +853,13 @@ public class PlaceManagerImpl
     /**
      * Before launching the perspective we check that it isn't already open by asking the
      * placeHistory service to extract the perspective encoded in the URL
-     * @param request
+     * @param place
      * @param activity
      * @param doWhenFinished
      */
-    private void launchPerspectiveActivity(final PlaceRequest request,
+    private void launchPerspectiveActivity(final PlaceRequest place,
                                            final PerspectiveActivity activity,
                                            final Command doWhenFinished) {
-        final PlaceRequest place = placeHistoryHandler.getPerspectiveFromPlace(request);
 
         checkNotNull("doWhenFinished",
                      doWhenFinished);

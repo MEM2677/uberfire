@@ -160,7 +160,6 @@ public class PlaceManagerTest {
                 .thenReturn(true);
         when(perspectiveManager.getCurrentPerspective())
                 .thenReturn(defaultPerspective);
-
         when(activityManager.getActivities(any(PlaceRequest.class))).thenReturn(singleton(notFoundActivity));
 
         // for now (and this will have to change for UF-61), PathPlaceRequest performs an IOC lookup for ObservablePath in its constructor
@@ -1401,6 +1400,7 @@ public class PlaceManagerTest {
                                               eq(expectedPartWidth),
                                               eq(expectedPartHeight));
 
+        
         // state changes in PlaceManager itself (contract between PlaceManager and everyone)
         assertTrue("Actual place requests: " + placeManager.getActivePlaceRequests(),
                    placeManager.getActivePlaceRequests().contains(placeRequest));

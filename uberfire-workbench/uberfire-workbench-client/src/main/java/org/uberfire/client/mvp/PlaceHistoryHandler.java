@@ -113,6 +113,11 @@ public class PlaceHistoryHandler {
         placeManager.goTo(newPlaceRequest);
     }
 
+    /**
+     * currentBookmarkableURLStatus schema   perspective#screen-1,screen-2#editor-path1,editor-path2
+     * @param newPlaceRequest
+     * @return
+     */
     private String tokenForPlace(final PlaceRequest newPlaceRequest) {
         if (defaultPlaceRequest.equals(newPlaceRequest)) {
             return "";
@@ -188,7 +193,6 @@ public class PlaceHistoryHandler {
     }
 
     public void registerOpenDock(@Observes UberfireDocksInteractionEvent event) {
-        GWT.log("OPENED DOCK");
         if (event.getType() == UberfireDocksInteractionEvent.InteractionType.SELECTED) {
             currentBookmarkableURLStatus =
                     BookmarkableUrlHelper.registerOpenedDock(currentBookmarkableURLStatus,
@@ -198,7 +202,6 @@ public class PlaceHistoryHandler {
     }
 
     public void registerCloseDock(@Observes UberfireDocksInteractionEvent event) {
-        GWT.log("CLOSED DOCK");
         if (event.getType() == UberfireDocksInteractionEvent.InteractionType.DESELECTED) {
 
             currentBookmarkableURLStatus =

@@ -31,7 +31,6 @@ import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 
-import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.user.client.ui.HasWidgets;
 import com.google.gwt.user.client.ui.IsWidget;
@@ -276,8 +275,7 @@ public class PlaceManagerImpl
                          });
                     return;
                 }
-                // matteo
-                GWT.log("MATTEO - " + place.getIdentifier());
+
                 launchWorkbenchActivityAtPosition(resolved.getPlaceRequest(),
                                                   workbenchActivity,
                                                   workbenchActivity.getDefaultPosition(),
@@ -298,51 +296,6 @@ public class PlaceManagerImpl
                  panel,
                  doWhenFinished);
         }
-    }
-
-    /**
-     * Restore the screen as taken from the URL
-     * @param screenName
-     */
-    public void restoreScreens(final String screenName) {
-        if (null == screenName
-                || 0 == screenName.trim().length())
-        {
-            return;
-        }
-
-//        final boolean isCloseOperation = screenName.startsWith(BookmarkableUrlHelper.CLOSED_PREFIX);
-//        final String screenElement = isCloseOperation ? screenName.substring(1) : screenName;
-//        final boolean isDockedScreen = screenElement.startsWith(BookmarkableUrlHelper.DOCK_PREFIX);
-//        final String screenId = isDockedScreen ? screenElement.substring(1) : screenElement;
-//
-//        GWT.log("processing screen: " + screenName + "close: " + isCloseOperation + " docked: " + isDockedScreen);
-////        GWT.log("screenId: " + screenId);
-//
-//        if (isDockedScreen)
-//        {
-//            toggleDock(screenId, !isCloseOperation);
-//        }
-//        else
-//        {
-//            if (isCloseOperation) {
-//                closePlace(screenId);
-//            }
-//            else
-//            {
-//                goTo(screenId);
-//            }
-//        }
-    }
-
-    /**
-     * Expand or collapse (hide) the desired dock in the current perspective
-     * @param dockName
-     * @param open
-     */
-    private void toggleDock(final String dockName, final boolean open)
-    {
-
     }
 
     private boolean closePlaces(final Collection<PlaceRequest> placeRequests) {

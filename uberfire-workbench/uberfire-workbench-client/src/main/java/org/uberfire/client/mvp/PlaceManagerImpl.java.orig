@@ -31,7 +31,6 @@ import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 
-import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.user.client.ui.HasWidgets;
 import com.google.gwt.user.client.ui.IsWidget;
@@ -134,17 +133,13 @@ public class PlaceManagerImpl
     @PostConstruct
     public void initPlaceHistoryHandler() {
         getPlaceHistoryHandler().initialize(this,
-                                          produceEventBus(),
-                                          DefaultPlaceRequest.NOWHERE);
+                                            produceEventBus(),
+                                            DefaultPlaceRequest.NOWHERE);
         workbenchLayout = layoutSelection.get();
     }
 
     private PlaceHistoryHandler getPlaceHistoryHandler() {
         return placeHistoryHandler;
-    }
-
-    public PlaceManagerHelper getPlaceManagerHelper() {
-        return placeManagerHelper;
     }
 
     @Override
@@ -282,7 +277,13 @@ public class PlaceManagerImpl
                          });
                     return;
                 }
-                // matteo
+<<<<<<< Updated upstream
+=======
+                // update URL iff the opening screen is a dock
+                placeManagerHelper.processIfOpeningDock(perspectiveManager.getCurrentPerspective(),
+                                                        place);
+>>>>>>> Stashed changes
+
                 launchWorkbenchActivityAtPosition(resolved.getPlaceRequest(),
                                                   workbenchActivity,
                                                   workbenchActivity.getDefaultPosition(),
@@ -305,6 +306,8 @@ public class PlaceManagerImpl
         }
     }
 
+<<<<<<< Updated upstream
+=======
     /**
      * Restore the screen as taken from the URL
      * @param screenName
@@ -349,6 +352,7 @@ public class PlaceManagerImpl
 
     }
 
+>>>>>>> Stashed changes
     private boolean closePlaces(final Collection<PlaceRequest> placeRequests) {
         boolean result = true;
         for (final PlaceRequest placeRequest : placeRequests) {
@@ -551,6 +555,8 @@ public class PlaceManagerImpl
         if (placeToClose == null) {
             return;
         }
+        placeManagerHelper.processIfClosingDock(perspectiveManager.getCurrentPerspective(),
+                                                placeToClose);
         closePlace(placeToClose,
                    false);
     }
@@ -809,10 +815,8 @@ public class PlaceManagerImpl
 
         try {
             activity.onOpen();
-            // Matteo
-            getPlaceManagerHelper().onOpen(activity,
-                                           place);
-
+            getPlaceHistoryHandler().registerOpen(activity,
+                                                  place);
         } catch (Exception ex) {
             lifecycleErrorHandler.handle(activity,
                                          LifecyclePhase.OPEN,
@@ -840,15 +844,13 @@ public class PlaceManagerImpl
             return;
         }
 
-
         activePopups.put(place.getIdentifier(),
                          activity);
 
         try {
             activity.onOpen();
-            // Matteo
-            getPlaceManagerHelper().onOpen(activity,
-                                           place);
+            getPlaceHistoryHandler().registerOpen(activity,
+                                                  place);
         } catch (Exception ex) {
             activePopups.remove(place.getIdentifier());
             lifecycleErrorHandler.handle(activity,
@@ -927,9 +929,8 @@ public class PlaceManagerImpl
                                                 openPartsRecursively(perspectiveDef.getRoot());
                                                 doWhenFinished.execute();
                                                 workbenchLayout.onResize();
-                                                // Matteo
-                                                getPlaceManagerHelper().onOpen(activity,
-                                                                               place);
+                                                placeHistoryHandler.registerOpen(activity,
+                                                                                 place);
                                             }
                                         });
                 }
@@ -1021,11 +1022,8 @@ public class PlaceManagerImpl
             }
         }
 
-        // matteo
-        placeManagerHelper.onClose(activity,
-                                   place);
-
-
+        getPlaceHistoryHandler().registerClose(activity,
+                                               place);
         workbenchPartCloseEvent.fire(new ClosePlaceEvent(place));
 
         panelManager.removePartForPlace(place);

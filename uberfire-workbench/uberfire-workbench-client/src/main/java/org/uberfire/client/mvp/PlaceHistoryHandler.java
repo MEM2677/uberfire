@@ -25,9 +25,11 @@ import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.user.client.History;
 import com.google.web.bindery.event.shared.EventBus;
 import com.google.web.bindery.event.shared.HandlerRegistration;
+import org.uberfire.client.workbench.docks.UberfireDock;
 import org.uberfire.client.workbench.docks.UberfireDocksInteractionEvent;
 import org.uberfire.mvp.PlaceRequest;
 import org.uberfire.mvp.impl.DefaultPlaceRequest;
+import org.uberfire.mvp.impl.PathPlaceRequest;
 import org.uberfire.workbench.model.ActivityResourceType;
 
 @ApplicationScoped
@@ -75,12 +77,12 @@ public class PlaceHistoryHandler {
         return () -> {
                 PlaceHistoryHandler.this.defaultPlaceRequest = DefaultPlaceRequest.NOWHERE;
                 PlaceHistoryHandler.this.placeManager = null;
-                //placeReg.removeHandler();
                 historyReg.removeHandler();
         };
     }
 
     private void updateHistoryBar() {
+
         historian.newItem(currentBookmarkableURLStatus,
                               false);
     }
@@ -113,11 +115,6 @@ public class PlaceHistoryHandler {
         placeManager.goTo(newPlaceRequest);
     }
 
-    /**
-     * currentBookmarkableURLStatus schema   perspective#screen-1,screen-2#editor-path1,editor-path2
-     * @param newPlaceRequest
-     * @return
-     */
     private String tokenForPlace(final PlaceRequest newPlaceRequest) {
         if (defaultPlaceRequest.equals(newPlaceRequest)) {
             return "";
@@ -193,20 +190,51 @@ public class PlaceHistoryHandler {
     }
 
     public void registerOpenDock(@Observes UberfireDocksInteractionEvent event) {
-        if (event.getType() == UberfireDocksInteractionEvent.InteractionType.SELECTED) {
-            currentBookmarkableURLStatus =
-                    BookmarkableUrlHelper.registerOpenedDock(currentBookmarkableURLStatus,
-                                                             event.getTargetDock());
-            updateHistoryBar();
-        }
     }
 
     public void registerCloseDock(@Observes UberfireDocksInteractionEvent event) {
-        if (event.getType() == UberfireDocksInteractionEvent.InteractionType.DESELECTED) {
+//        if (event.getType() == UberfireDocksInteractionEvent.InteractionType.DESELECTED) {
+//
+//            currentBookmarkableURLStatus =
+//                    BookmarkableUrlHelper.registerClosedDock(currentBookmarkableURLStatus,
+//                                                             event.getTargetDock());
+//            updateHistoryBar();
+//        }
+    }
 
+    // FIXME test this!
+    public void registerOpenDock(UberfireDock dock) {
+
+        if (null == dock) {
+            return;
+        }
+            currentBookmarkableURLStatus =
+                    BookmarkableUrlHelper.registerOpenedDock(currentBookmarkableURLStatus,
+                                                         dock);
+            updateHistoryBar();
+    }
+
+
+    public void registerCloseDock(UberfireDock dock) {
+
+        if (null == dock) {
+            return;
+        }
             currentBookmarkableURLStatus =
                     BookmarkableUrlHelper.registerClosedDock(currentBookmarkableURLStatus,
-                                                             event.getTargetDock());
+                                                         dock);
+            updateHistoryBar();
+    }
+
+    public void registerClosedEditor(final PlaceRequest place) {
+        if (null == place) {
+            return;
+        }
+
+        if (place instanceof PathPlaceRequest) {
+            currentBookmarkableURLStatus =
+                    BookmarkableUrlHelper.registerCloseEditor(currentBookmarkableURLStatus,
+                                                              place);
             updateHistoryBar();
         }
     }

@@ -46,7 +46,6 @@ import org.uberfire.backend.vfs.Path;
 import org.uberfire.client.mvp.AbstractPopupActivity;
 import org.uberfire.client.mvp.Activity;
 import org.uberfire.client.mvp.ActivityManager;
-import org.uberfire.client.mvp.BookmarkableUrlHelper;
 import org.uberfire.client.mvp.ContextActivity;
 import org.uberfire.client.mvp.PerspectiveActivity;
 import org.uberfire.client.mvp.PerspectiveManager;
@@ -1400,7 +1399,6 @@ public class PlaceManagerTest {
                                               eq(expectedPartWidth),
                                               eq(expectedPartHeight));
 
-        
         // state changes in PlaceManager itself (contract between PlaceManager and everyone)
         assertTrue("Actual place requests: " + placeManager.getActivePlaceRequests(),
                    placeManager.getActivePlaceRequests().contains(placeRequest));
@@ -1446,6 +1444,7 @@ public class PlaceManagerTest {
                                           any(PanelDefinition.class),
                                           any(Position.class));
 
+       
         // state changes in PlaceManager itself (contract between PlaceManager and everyone)
         assertTrue(
                 "Actual place requests: " + placeManager.getActivePlaceRequests(),

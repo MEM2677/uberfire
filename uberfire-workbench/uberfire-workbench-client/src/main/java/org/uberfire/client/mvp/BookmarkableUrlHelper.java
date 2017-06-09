@@ -22,8 +22,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.google.gwt.core.client.GWT;
 import org.uberfire.client.workbench.docks.UberfireDock;
 import org.uberfire.mvp.PlaceRequest;
+import org.uberfire.mvp.impl.PathPlaceRequest;
 
 /**
  * A bookmarkable URL has the following form:
@@ -360,8 +362,7 @@ public class BookmarkableUrlHelper {
 
     public static String registerOpenedDock(String currentBookmarkableURLStatus,
                                             UberfireDock targetDock) {
-        if (!isNotBlank(currentBookmarkableURLStatus)
-                || null == targetDock) {
+        if (null == targetDock) {
             return currentBookmarkableURLStatus;
         }
         final String id = getDockId(targetDock);
@@ -389,7 +390,7 @@ public class BookmarkableUrlHelper {
     }
 
     public static String registerClosedDock(String currentBookmarkableURLStatus,
-                                            UberfireDock targetDock) {
+                                            final UberfireDock targetDock) {
         if (!isNotBlank(currentBookmarkableURLStatus)
                 || null == targetDock) {
             return currentBookmarkableURLStatus;
@@ -399,6 +400,17 @@ public class BookmarkableUrlHelper {
         if (!currentBookmarkableURLStatus.contains(closed)) {
             return currentBookmarkableURLStatus.replace(id,
                                                         CLOSED_DOCK_PREFIX.concat(id));
+        }
+        return currentBookmarkableURLStatus;
+    }
+
+    // FIXME test it
+    public static String registerCloseEditor(String currentBookmarkableURLStatus,
+                                             final PlaceRequest place) {
+        if (null != place
+                && place instanceof PathPlaceRequest) {
+            return currentBookmarkableURLStatus.replace(place.getFullIdentifier(),
+                                                        "");
         }
         return currentBookmarkableURLStatus;
     }

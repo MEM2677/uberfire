@@ -67,7 +67,8 @@ public class PlaceManagerHelper {
         PerspectiveActivity perspectiveActivity =
                 getPerspectiveManager().getCurrentPerspective();
 
-        if (null != place) {
+        if (null != getUberfireDocks()
+                && null != place) {
             UberfireDock dock = getUberfireDocks()
                     .getDockedScreenInPerspective(perspectiveActivity.getIdentifier(),
                                                   place.getIdentifier());
@@ -96,7 +97,8 @@ public class PlaceManagerHelper {
         PerspectiveActivity perspectiveActivity =
                 getPerspectiveManager().getCurrentPerspective();
 
-        if (null != perspectiveActivity
+        if (null != getUberfireDocks()
+                && null != perspectiveActivity
                 && null != place) {
             UberfireDock dock = getUberfireDocks()
                     .getDockedScreenInPerspective(perspectiveActivity.getIdentifier(),
@@ -117,4 +119,12 @@ public class PlaceManagerHelper {
             getPlaceHistoryHandler().registerClosedEditor(place);
         }
     }
+
+    /**
+     *
+     */
+    public void flush() {
+        placeHistoryHandler.flush();
+    }
+
 }

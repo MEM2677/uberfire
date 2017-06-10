@@ -293,7 +293,7 @@ public class PlaceManagerImpl
                                     (PopupActivity) activity);
                 doWhenFinished.execute();
             } else if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
-                placeHistoryHandler.flush();
+                getPlaceManagerHelper().flush();
                 launchPerspectiveActivity(place,
                                           (PerspectiveActivity) activity,
                                           doWhenFinished);

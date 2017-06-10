@@ -305,47 +305,75 @@ public class PlaceManagerImpl
         }
     }
 
+
     /**
-     * Restore the screen as taken from the URL
-     * @param screenName
+     * Restore the elements
+     * @param url
      */
-    public void restoreScreens(final String screenName) {
-        if (null == screenName
-                || 0 == screenName.trim().length()) {
+    public void restoreBookmakmarkableUrl(final String url) {
+        if (url == null ) {
             return;
         }
+        final PlaceRequest restore = new DefaultPlaceRequest(url);
+        final PlaceRequest perspective =
+                getPlaceHistoryHandler().getPerspectiveFromPlace(restore);
+        // restore perspective
+        goTo(perspective);
+        final String perspectiveGeneratedUrl =
+                        this.getPlaceHistoryHandler().getCurrentBookmarkableURLStatus();
+        // restore non docked screens
+        final Set<String> screens = BookmarkableUrlHelper.getScreensFromPlace(restore);
+        for (String screen: screens) {
+            toggleScreen(screen, perspectiveGeneratedUrl);
+        }
+        // restore docked screens
+        final Set<String> docks =
+                BookmarkableUrlHelper.getDockedScreensFromPlace(restore);
+        for (String dock: docks) {
+            toggleDock(dock, perspectiveGeneratedUrl);
+        }
+        // TODO process editors
 
-//        final boolean isCloseOperation = screenName.startsWith(BookmarkableUrlHelper.CLOSED_PREFIX);
-//        final String screenElement = isCloseOperation ? screenName.substring(1) : screenName;
-//        final boolean isDockedScreen = screenElement.startsWith(BookmarkableUrlHelper.DOCK_PREFIX);
-//        final String screenId = isDockedScreen ? screenElement.substring(1) : screenElement;
-//
-//        GWT.log("processing screen: " + screenName + "close: " + isCloseOperation + " docked: " + isDockedScreen);
-////        GWT.log("screenId: " + screenId);
-//
-//        if (isDockedScreen)
-//        {
-//            toggleDock(screenId, !isCloseOperation);
-//        }
-//        else
-//        {
-//            if (isCloseOperation) {
-//                closePlace(screenId);
-//            }
-//            else
-//            {
-//                goTo(screenId);
-//            }
-//        }
     }
+
+    /**
+     * Open or close a non docked screen
+     * @param screendName
+     * @param currentUrl
+     */
+    private void toggleScreen(final String screendName, final String currentUrl) {
+        if (screendName == null) {
+            return;
+        }
+        // check whether the screen was already opened upon perspective launch
+        if (currentUrl.contains(screendName)) {
+            return;
+        }
+        if (!screendName.startsWith(BookmarkableUrlHelper.CLOSED_PREFIX)) {
+            // open screen
+            goTo(screendName);
+        } else {
+            // close screen
+            final String id = screendName.substring(1);
+
+            closePlace(id);
+        }
+    }
+
 
     /**
      * Expand or collapse (hide) the desired dock in the current perspective
      * @param dockName
-     * @param open
+     * @param currentUrl
      */
-    private void toggleDock(final String dockName,
-                            final boolean open) {
+    private void toggleDock(final String dockName, final String currentUrl) {
+        if (dockName == null) {
+            return;
+        }
+        // check whether the screen was already opened upon perspective launch
+        if (currentUrl.contains(dockName)) {
+            return;
+        }
 
     }
 

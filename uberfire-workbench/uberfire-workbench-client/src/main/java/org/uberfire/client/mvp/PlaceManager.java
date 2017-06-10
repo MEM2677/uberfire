@@ -177,5 +177,5 @@ public interface PlaceManager {
      * Restore a screen as specified in the bookmarkable URL
      * @param screenName
      */
-    void restoreScreens(final String screenName);
+    void restoreBookmakmarkableUrl(final String screenName);
 }

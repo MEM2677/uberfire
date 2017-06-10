@@ -183,7 +183,7 @@ public class MockPlaceManager implements PlaceManager {
     }
 
     @Override
-    public void restoreScreens(String screenName) {
+    public void restoreBookmakmarkableUrl(String screenName) {
         throw new UnsupportedOperationException("Not implemented.");
     }
 

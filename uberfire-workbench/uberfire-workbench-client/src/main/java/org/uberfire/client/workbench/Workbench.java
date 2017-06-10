@@ -53,7 +53,6 @@ import org.uberfire.client.mvp.PlaceManager;
 import org.uberfire.client.resources.WorkbenchResources;
 import org.uberfire.client.workbench.events.ApplicationReadyEvent;
 import org.uberfire.mvp.ParameterizedCommand;
-import org.uberfire.mvp.PlaceRequest;
 import org.uberfire.mvp.impl.DefaultPlaceRequest;
 import org.uberfire.mvp.impl.PathPlaceRequest;
 import org.uberfire.rpc.SessionInfo;
@@ -295,17 +294,9 @@ public class Workbench {
                            });
 
         } else if (isAddressableUrl()) {
-//            GWT.log("=== REQUEST " + req);
+            // discard unneeded part of the URL, that is, get everything after the #
             req = req.substring(req.indexOf('#') + 1);
-//            GWT.log("=== RESTORING " + req);
-            final PlaceRequest restore = new DefaultPlaceRequest(req);
-            final PlaceRequest perspective =
-                    placeHistoryHandler.getPerspectiveFromPlace(restore);
-            // perspective first
-            placeManager.goTo(perspective);
-
-            Set<String> screens = BookmarkableUrlHelper.getScreensFromPlace(restore);
-//            screens.forEach(s -> placeManager.restoreScreens(s));
+            placeManager.restoreBookmakmarkableUrl(req);
         } else {
             // do nothing
         }

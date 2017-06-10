@@ -294,10 +294,9 @@ public class BookmarkableUrlHelper {
         } else {
             url = place.getFullIdentifier();
         }
-
         start = url.indexOf(DOCK_BEGIN_SEP);
         end = url.indexOf(DOCK_CLOSE_SEP) + 1;
-        if (start > 0) {
+        if (start > -1) {
             docks = url.substring(start,
                                   end);
             url = url.replace(docks,

@@ -234,7 +234,7 @@ public class PluginPlaceManagerImpl implements PlaceManager {
     }
 
     @Override
-    public void restoreScreens(String screenName) {
+    public void restoreBookmakmarkableUrl(String screenName) {
         fail();
     }
 }

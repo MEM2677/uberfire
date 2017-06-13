@@ -22,10 +22,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.google.gwt.core.client.GWT;
 import org.uberfire.client.workbench.docks.UberfireDock;
 import org.uberfire.mvp.PlaceRequest;
-import org.uberfire.mvp.impl.PathPlaceRequest;
 
 /**
  * A bookmarkable URL has the following form:
@@ -294,9 +292,10 @@ public class BookmarkableUrlHelper {
         } else {
             url = place.getFullIdentifier();
         }
+
         start = url.indexOf(DOCK_BEGIN_SEP);
         end = url.indexOf(DOCK_CLOSE_SEP) + 1;
-        if (start > -1) {
+        if (start > 0) {
             docks = url.substring(start,
                                   end);
             url = url.replace(docks,
@@ -361,7 +360,7 @@ public class BookmarkableUrlHelper {
 
     public static String registerOpenedDock(String currentBookmarkableURLStatus,
                                             UberfireDock targetDock) {
-        if (null == targetDock) {
+        if (targetDock == null) {
             return currentBookmarkableURLStatus;
         }
         final String id = getDockId(targetDock);

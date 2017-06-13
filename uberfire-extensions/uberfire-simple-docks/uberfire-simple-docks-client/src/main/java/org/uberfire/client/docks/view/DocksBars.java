@@ -362,4 +362,12 @@ public class DocksBars {
             dockBar.expand(dock);
         }
     }
+
+    public void hide(UberfireDock dock) {
+        DocksBar dockBar = getDockBar(dock);
+
+        if (dockBar != null) {
+            collapse(dockBar.getExpandedBar());
+        }
+    }
 }

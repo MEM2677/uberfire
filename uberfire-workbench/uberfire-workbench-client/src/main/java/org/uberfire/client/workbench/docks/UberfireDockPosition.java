@@ -25,7 +25,7 @@ public enum UberfireDockPosition {
         }
         @Override
         public String getShortName() {
-            return "S";
+            return POS_SOUTH;
         }
     },
     WEST {
@@ -36,7 +36,7 @@ public enum UberfireDockPosition {
 
         @Override
         public String getShortName() {
-            return "W";
+            return POS_WEST;
         }
     },
     EAST {
@@ -46,10 +46,28 @@ public enum UberfireDockPosition {
         }
         @Override
         public String getShortName() {
-            return "E";
+            return POS_EAST;
         }
     };
 
+    public static UberfireDockPosition decode(final String pos) {
+        if (pos == null
+                || pos.trim().length() == 0) {
+            return null;
+        }
+        if (pos.equals(POS_EAST)) {
+            return EAST;
+        } else if (pos.equals(POS_WEST)) {
+            return WEST;
+        } else {
+            return SOUTH;
+        }
+    }
+
     public abstract boolean allowSingleDockItem();
     public abstract String getShortName();
+
+    public final static String POS_EAST = "E";
+    public final static String POS_WEST = "W";
+    public final static String POS_SOUTH = "S";
 }

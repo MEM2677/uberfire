@@ -374,7 +374,15 @@ public class PlaceManagerImpl
         if (currentUrl.contains(dockName)) {
             return;
         }
-
+        final boolean isClose = dockName.startsWith(BookmarkableUrlHelper.CLOSED_DOCK_PREFIX);
+        final String dockId = isClose ? dockName.substring(1) : dockName;
+        GWT.log("DOCK ---> " + dockName + ":" + dockId+":"+isClose);
+        if (isClose) {
+            closePlace(dockId);
+//            getPlaceManagerHelper().toggleDock(dockId);
+        } else {
+//            getPlaceManagerHelper().openDock(dockId);
+        }
     }
 
     private boolean closePlaces(final Collection<PlaceRequest> placeRequests) {

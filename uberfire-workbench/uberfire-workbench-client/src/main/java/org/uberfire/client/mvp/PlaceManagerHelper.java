@@ -4,9 +4,11 @@ import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import com.google.gwt.core.client.GWT;
 import org.jboss.errai.ioc.client.container.SyncBeanDef;
 import org.jboss.errai.ioc.client.container.SyncBeanManager;
 import org.uberfire.client.workbench.docks.UberfireDock;
+import org.uberfire.client.workbench.docks.UberfireDockPosition;
 import org.uberfire.client.workbench.docks.UberfireDocks;
 import org.uberfire.mvp.PlaceRequest;
 import org.uberfire.mvp.impl.PathPlaceRequest;
@@ -52,6 +54,7 @@ public class PlaceManagerHelper {
     }
 
     /**
+     * Take all the appropriate steps to track an opened screen, whatever the type
      * @param activity
      * @param place
      */
@@ -79,6 +82,7 @@ public class PlaceManagerHelper {
     }
 
     /**
+     * Take all the appropriate steps to track a closed screen, whatever the type
      * @param activity
      * @param place
      */
@@ -121,10 +125,39 @@ public class PlaceManagerHelper {
     }
 
     /**
-     *
+     * Reset the current bookmarkable URL
      */
     public void flush() {
         placeHistoryHandler.flush();
     }
+
+
+    /**
+     * Show (expand) or hide (collapse) the desired dock in the current perspective
+     * @param dockName
+     */
+    public void toggleDock(final String dockName) {
+        final Activity currentActivity =
+                getPerspectiveManager().getCurrentPerspective();
+        final String positionString =
+                String.valueOf(dockName.charAt(0));
+//        final UberfireDockPosition position =
+//                UberfireDockPosition.decode(positionString);
+        final String dockId =
+                dockName.substring(1);
+
+        if (null != currentActivity
+                && null != currentActivity.getIdentifier()) {
+            String perspectiveName = currentActivity.getIdentifier();
+            UberfireDock dock = uberfireDocks.getDockedScreenInPerspective(perspectiveName,
+                                                                           dockId);
+            if (null != dock) {
+                    GWT.log("CLOSING " + dockId);
+//                    uberfireDocks.expand(dock);
+//                uberfireDocks.collapse(dock);
+            }
+        }
+    }
+
 
 }

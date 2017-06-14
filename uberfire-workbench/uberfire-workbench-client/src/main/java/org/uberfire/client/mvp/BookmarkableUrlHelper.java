@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 
 import org.uberfire.client.workbench.docks.UberfireDock;
 import org.uberfire.mvp.PlaceRequest;
+import org.uberfire.mvp.impl.PathPlaceRequest;
 
 /**
  * A bookmarkable URL has the following form:

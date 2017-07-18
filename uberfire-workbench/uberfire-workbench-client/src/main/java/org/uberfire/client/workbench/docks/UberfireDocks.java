@@ -77,4 +77,29 @@ public interface UberfireDocks {
      */
     void show(UberfireDockPosition position,
               String perspectiveName);
+
+    boolean isScreenDockedInPerspective(String perspective,
+                                        String screen);
+
+    /**
+     * Find the first dock with the desired name
+     * @param perspective the perspective the docks belongs to
+     * @param screen the identifier of the dock
+     * @return
+     */
+    UberfireDock getDockedScreenInPerspective(String perspective,
+                                              String screen);
+
+    /**
+     * Find the first dock with the desired name and position
+     *
+     * @param perspective the perspective the docks belongs to
+     * @param screen the identifier of the dock
+     * @param position the poition in the perspective
+     * @return
+     */
+    public UberfireDock getDockedScreenInPerspective(String perspective,
+                                                     String screen,
+                                                     UberfireDockPosition position);
+
 }

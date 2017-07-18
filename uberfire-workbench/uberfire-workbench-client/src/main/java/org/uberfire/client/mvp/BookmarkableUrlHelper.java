@@ -156,10 +156,10 @@ public class BookmarkableUrlHelper {
     }
 
     /**
-     * Given a bookmarkable URL this methods returns a PlaceRequest
-     * with the perspective
-     * @param place\
-     * @return
+     * Return a placeRequest to the perspective only; the rest of the bookmarkable URL
+     * is ignored
+     * @param place bookmarkable URL
+     * @return a new placeRequets object pointing to the perspective of the input param
      */
     public static PlaceRequest getPerspectiveFromPlace(PlaceRequest place) {
         String url = place.getFullIdentifier();
@@ -281,6 +281,7 @@ public class BookmarkableUrlHelper {
         int start;
         int end;
         String docks;
+        HashSet<String> result = new HashSet<>();
 
         if (!isNotBlank(place)) {
             return new HashSet<>();
@@ -293,24 +294,28 @@ public class BookmarkableUrlHelper {
         } else {
             url = place.getFullIdentifier();
         }
-
+        // get the docks and the screens list
         start = url.indexOf(DOCK_BEGIN_SEP);
         end = url.indexOf(DOCK_CLOSE_SEP) + 1;
-        if (start > 0) {
+        if (start > -1) {
             docks = url.substring(start,
                                   end);
             url = url.replace(docks,
                               "");
         }
-        // replace the '$' with a comma ','
-        url = url.replace(OTHER_SCREEN_SEP,
-                          SEPARATOR);
-        String[] token = url.split(SEPARATOR);
-        return new HashSet<>(Arrays.asList(token));
+        if (null != url
+                && !url.trim().equals("")) {
+            // replace the '$' with a comma ','
+            url = url.replace(OTHER_SCREEN_SEP,
+                              SEPARATOR);
+            String[] token = url.split(SEPARATOR);
+            result = new HashSet<>(Arrays.asList(token));
+        }
+        return result;
     }
 
     /**
-     * Get the opened screens in the given place request
+     * Get the closed screens in the given place request
      * @param place
      * @return
      */

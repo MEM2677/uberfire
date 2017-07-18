@@ -27,6 +27,7 @@ import javax.enterprise.event.Event;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
+import com.google.gwt.core.client.GWT;
 import org.uberfire.client.docks.view.DocksBar;
 import org.uberfire.client.docks.view.DocksBars;
 import org.uberfire.client.workbench.docks.UberfireDock;
@@ -174,6 +175,44 @@ public class UberfireDocksImpl implements UberfireDocks {
         executeOnDocks(perspectiveName,
                        position,
                        () -> showDock(position));
+    }
+
+    @Override
+    public boolean isScreenDockedInPerspective(String perspective,
+                                               String screen) {
+        return (getDockedScreenInPerspective(perspective,
+                                             screen) != null);
+    }
+
+    @Override
+    public UberfireDock getDockedScreenInPerspective(String perspective,
+                                                     String screen) {
+        UberfireDock res = null;
+        List<UberfireDock> docks = docksPerPerspective.get(perspective);
+
+        if (null != docks) {
+            res = docks.stream()
+                    .filter(s -> s.getPlaceRequest().getIdentifier().equals(screen))
+                    .findFirst()
+                    .orElse(null);
+        }
+        return (res);
+    }
+
+    public UberfireDock getDockedScreenInPerspective(String perspective,
+                                                     String screen,
+                                                     UberfireDockPosition position) {
+        UberfireDock res = null;
+        List<UberfireDock> docks = docksPerPerspective.get(perspective);
+
+        if (null != docks) {
+            res = docks.stream()
+                    .filter(s -> s.getPlaceRequest().getIdentifier().equals(screen)
+                            && s.getDockPosition() == position)
+                    .findFirst()
+                    .orElse(null);
+        }
+        return (res);
     }
 
     private void showDock(UberfireDockPosition position) {

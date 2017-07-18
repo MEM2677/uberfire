@@ -31,6 +31,7 @@ import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.user.client.ui.HasWidgets;
 import com.google.gwt.user.client.ui.IsWidget;
@@ -41,13 +42,19 @@ import org.jboss.errai.common.client.dom.HTMLElement;
 import org.jboss.errai.common.client.ui.ElementWrapperWidget;
 import org.jboss.errai.ioc.client.api.EnabledByProperty;
 import org.jboss.errai.ioc.client.api.SharedSingleton;
+import org.jboss.errai.ioc.client.container.SyncBeanDef;
+import org.jboss.errai.ioc.client.container.SyncBeanManager;
 import org.uberfire.backend.vfs.ObservablePath;
 import org.uberfire.backend.vfs.Path;
 import org.uberfire.client.menu.SplashScreenMenuPresenter;
 import org.uberfire.client.mvp.ActivityLifecycleError.LifecyclePhase;
 import org.uberfire.client.workbench.LayoutSelection;
 import org.uberfire.client.workbench.PanelManager;
+import org.uberfire.client.workbench.StandaloneEditorPerspective;
 import org.uberfire.client.workbench.WorkbenchLayout;
+import org.uberfire.client.workbench.docks.UberfireDock;
+import org.uberfire.client.workbench.docks.UberfireDockPosition;
+import org.uberfire.client.workbench.docks.UberfireDocks;
 import org.uberfire.client.workbench.events.BeforeClosePlaceEvent;
 import org.uberfire.client.workbench.events.ClosePlaceEvent;
 import org.uberfire.client.workbench.events.NewSplashScreenActiveEvent;
@@ -127,13 +134,37 @@ public class PlaceManagerImpl
     private WorkbenchLayout workbenchLayout;
     @Inject
     private LayoutSelection layoutSelection;
+    @Inject
+    private SyncBeanManager iocManager;
+    // do NOT @Inject this!
+    private UberfireDocks uberfireDocks;
+
+    public UberfireDocks getUberfireDocks() {
+        return uberfireDocks;
+    }
+
+    public SyncBeanManager getIocManager() {
+        return iocManager;
+    }
+
+    public PerspectiveManager getPerspectiveManager() {
+        return perspectiveManager;
+    }
 
     @PostConstruct
     public void initPlaceHistoryHandler() {
         getPlaceHistoryHandler().initialize(this,
-                                          produceEventBus(),
-                                          DefaultPlaceRequest.NOWHERE);
+                                            produceEventBus(),
+                                            DefaultPlaceRequest.NOWHERE);
         workbenchLayout = layoutSelection.get();
+        // get the UberfireDocks bean (if any)
+        if (null != getIocManager()) {
+            SyncBeanDef<UberfireDocks> dockBean = getIocManager().lookupBean(UberfireDocks.class);
+
+            if (null != dockBean) {
+                this.uberfireDocks = dockBean.getInstance();
+            }
+        }
     }
 
     private PlaceHistoryHandler getPlaceHistoryHandler() {
@@ -203,7 +234,7 @@ public class PlaceManagerImpl
     public void goTo(PlaceRequest place,
                      HasWidgets addTo) {
 
-        closeOpenPlacesAt(panelsOfThisHasWidgets(addTo));
+//        closeOpenPlacesAt(panelsOfThisHasWidgets(addTo));
         goToTargetPanel(place,
                         panelManager.addCustomPanel(addTo,
                                                     UnanchoredStaticWorkbenchPanelPresenter.class.getName()));
@@ -213,7 +244,7 @@ public class PlaceManagerImpl
     public void goTo(PlaceRequest place,
                      HTMLElement addTo) {
 
-        closeOpenPlacesAt(panelsOfThisHTMLElement(addTo));
+//        closeOpenPlacesAt(panelsOfThisHTMLElement(addTo));
 
         goToTargetPanel(place,
                         panelManager.addCustomPanel(addTo,
@@ -297,6 +328,102 @@ public class PlaceManagerImpl
             goTo(resolved.getPlaceRequest(),
                  panel,
                  doWhenFinished);
+        }
+    }
+
+    /**
+     * Restore the elements
+     * @param url
+     */
+    public void restoreBookmakmarkableUrl(final String url) {
+        if (url == null) {
+            return;
+        }
+        getPlaceHistoryHandler().flush();
+        final PlaceRequest restore = new DefaultPlaceRequest(url);
+        final PlaceRequest perspective =
+                getPlaceHistoryHandler().getPerspectiveFromPlace(restore);
+        // restore perspective
+        goTo(perspective);
+        final String perspectiveGeneratedUrl =
+                this.getPlaceHistoryHandler().getCurrentBookmarkableURLStatus();
+        // restore non docked screens
+        final Set<String> screens = BookmarkableUrlHelper.getScreensFromPlace(restore);
+        for (String screen : screens) {
+            toggleScreen(screen,
+                         perspectiveGeneratedUrl);
+        }
+        // restore docked screens
+        final Set<String> docks =
+                BookmarkableUrlHelper.getDockedScreensFromPlace(restore);
+        for (String dock : docks) {
+            toggleDock(dock,
+                       perspectiveGeneratedUrl);
+        }
+        // TODO process editors
+    }
+
+    /**
+     * Open or close a non docked screen
+     * @param screendName
+     * @param currentUrl
+     */
+    private void toggleScreen(final String screendName,
+                              final String currentUrl) {
+        if (screendName == null) {
+            return;
+        }
+        // check whether the screen was already opened upon perspective launch
+        if (currentUrl.contains(screendName)) {
+            return;
+        }
+        if (!screendName.startsWith(BookmarkableUrlHelper.CLOSED_PREFIX)) {
+            // open screen
+            goTo(screendName);
+        } else {
+            // close screen
+            final String id = screendName.substring(1);
+
+            closePlace(id);
+        }
+    }
+
+    /**
+     * Expand or collapse (hide) the desired dock in the current perspective
+     * @param dockName
+     * @param currentUrl
+     */
+    private void toggleDock(final String dockName,
+                            final String currentUrl) {
+        if (dockName == null
+                || this.getUberfireDocks() == null) {
+            return;
+        }
+        final boolean isClosed = dockName.startsWith(BookmarkableUrlHelper.CLOSED_DOCK_PREFIX);
+        final String positionedDockId = isClosed ? dockName.substring(1) : dockName;
+        final String dockId = UberfireDockPosition
+                .getScreenName(positionedDockId);
+        final UberfireDockPosition position = UberfireDockPosition
+                .getScreenPosition(positionedDockId);
+        final Activity currentActivity =
+                getPerspectiveManager().getCurrentPerspective();
+        final String perspectiveName = currentActivity.getIdentifier();
+        final UberfireDock dock =
+                this.getUberfireDocks().getDockedScreenInPerspective(perspectiveName,
+                                                                     dockId,
+                                                                     position);
+        GWT.log(dockName + " : positioned " + positionedDockId + " : id " + dockId + " : " + isClosed);
+
+        // check if the screen was already opened upon perspective launch and if the dock exists
+        if ((currentUrl.contains(dockName)
+                && !isClosed)
+                || dock == null) {
+            return;
+        }
+        if (isClosed) {
+            getUberfireDocks().close(dock);
+        } else {
+            getUberfireDocks().open(dock);
         }
     }
 
@@ -788,7 +915,6 @@ public class PlaceManagerImpl
         if (activePopups.get(place.getIdentifier()) != null) {
             return;
         }
-
 
         activePopups.put(place.getIdentifier(),
                          activity);

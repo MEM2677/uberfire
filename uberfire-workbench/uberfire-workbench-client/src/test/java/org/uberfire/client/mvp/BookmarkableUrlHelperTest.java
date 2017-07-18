@@ -282,9 +282,11 @@ public class BookmarkableUrlHelperTest extends TestCase {
         final String url = "perspective|~screen1,screen2$!screen3,screen4";
         final String url2 = "UFWidgets|PagedTableScreen[ESimpleDockScreen,!WSimpleDockScreen,ESimpleDockScreen,]";
         final String url3 = "PagedTableScreen[ESimpleDockScreen,!WSimpleDockScreen,ESimpleDockScreen,]";
+        final String url4 = "perspective|[!WSimpleDockedScreen,]";
         final PlaceRequest place = new DefaultPlaceRequest(url);
         final PlaceRequest place2 = new DefaultPlaceRequest(url2);
         final PlaceRequest placeNoPerspective = new DefaultPlaceRequest(url3);
+        final PlaceRequest placeNoScreen = new DefaultPlaceRequest(url4);
         final PlaceRequest placeNull = null;
 
         Set<String> set = BookmarkableUrlHelper.getScreensFromPlace(place);
@@ -315,6 +317,11 @@ public class BookmarkableUrlHelperTest extends TestCase {
         assertNotNull(set);
         assertFalse(set.isEmpty());
         assertTrue(set.contains("PagedTableScreen"));
+
+        // test URL with no screens
+        set = BookmarkableUrlHelper.getScreensFromPlace(placeNoScreen);
+        assertNotNull(set);
+        assertTrue(set.isEmpty());
     }
 
     @Test

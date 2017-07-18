@@ -52,4 +52,48 @@ public enum UberfireDockPosition {
 
     public abstract boolean allowSingleDockItem();
     public abstract String getShortName();
+
+    /**
+     * Given the name of a docked screen in a bookmarkable URL return
+     * the ID of the screen; if the positional element is not detected
+     * the original name is returned
+     * @param dockedScreenName
+     * @return
+     */
+    public static String getScreenName(String dockedScreenName) {
+        if (dockedScreenName != null) {
+
+            if (dockedScreenName.startsWith(EAST.getShortName())) {
+                return dockedScreenName.replaceFirst(EAST.getShortName(), "");
+            }
+            if (dockedScreenName.startsWith(WEST.getShortName())) {
+                return dockedScreenName.replaceFirst(WEST.getShortName(), "");
+            }
+            if (dockedScreenName.startsWith(SOUTH.getShortName())) {
+                return dockedScreenName.replaceFirst(SOUTH.getShortName(), "");
+            }
+        }
+        return dockedScreenName;
+    }
+
+    /**
+     * Given the nameof a docked screen in a bookmarkable URL return the
+     * position
+     * @param dockedScreenName
+     * @return
+     */
+    public static UberfireDockPosition getScreenPosition(String dockedScreenName) {
+        if (dockedScreenName != null) {
+            if (dockedScreenName.startsWith(EAST.getShortName())) {
+                return EAST;
+            }
+            if (dockedScreenName.startsWith(WEST.getShortName())) {
+                return WEST;
+            }
+            if (dockedScreenName.startsWith(SOUTH.getShortName())) {
+                return SOUTH;
+            }
+        }
+        return null;
+    }
 }

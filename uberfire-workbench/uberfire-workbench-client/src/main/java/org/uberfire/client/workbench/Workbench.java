@@ -32,6 +32,7 @@ import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.event.logical.shared.ResizeEvent;
 import com.google.gwt.event.logical.shared.ResizeHandler;
+import com.google.gwt.http.client.URL;
 import com.google.gwt.user.client.Command;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.Window.ClosingEvent;
@@ -47,6 +48,7 @@ import org.jboss.errai.ioc.client.container.SyncBeanManager;
 import org.jboss.errai.security.shared.api.identity.User;
 import org.slf4j.Logger;
 import org.uberfire.backend.vfs.Path;
+import org.uberfire.client.mvp.BookmarkableUrlHelper;
 import org.uberfire.client.mvp.PerspectiveActivity;
 import org.uberfire.client.mvp.PlaceManager;
 import org.uberfire.client.resources.WorkbenchResources;
@@ -201,9 +203,22 @@ public class Workbench {
 
         Map<String, List<String>> windowParamMap = Window.Location.getParameterMap();
         isStandaloneMode = windowParamMap.containsKey("standalone");
-        List<String> headers = windowParamMap.getOrDefault("header", Collections.emptyList());
+        List<String> headers = windowParamMap.getOrDefault("header",
+                                                           Collections.emptyList());
         headersToKeep.addAll(headers);
         addStartupBlocker(Workbench.class);
+    }
+
+    /**
+     * Check whether the current address is an addressable URl as defined in UF-195.
+     * Basically we check if the URL contains a PERSPECTIVE_SEPARATOR (a special character
+     * defined in placeHistoryHandler
+     * @return
+     */
+    private boolean isAddressableUrl() {
+        String req = Window.Location.getHref();
+        return (null != req && URL.decode(req)
+                .contains(BookmarkableUrlHelper.PERSPECTIVE_SEP));
     }
 
     private void bootstrap() {
@@ -218,12 +233,17 @@ public class Workbench {
 
         //Lookup PerspectiveProviders and if present launch it to set-up the Workbench
         if (!isStandaloneMode) {
-            final PerspectiveActivity homePerspective = getHomePerspectiveActivity();
-            if (homePerspective != null) {
-                appReady.fire(new ApplicationReadyEvent());
-                placeManager.goTo(new DefaultPlaceRequest(homePerspective.getIdentifier()));
+            if (!isAddressableUrl()) {
+                final PerspectiveActivity homePerspective = getHomePerspectiveActivity();
+
+                if (homePerspective != null) {
+                    appReady.fire(new ApplicationReadyEvent());
+                    placeManager.goTo(new DefaultPlaceRequest(homePerspective.getIdentifier()));
+                } else {
+                    logger.error("No home perspective available!");
+                }
             } else {
-                logger.error("No home perspective available!");
+                startRestoreBookmarkedUrl();
             }
         } else {
             handleStandaloneMode(Window.Location.getParameterMap());
@@ -258,6 +278,7 @@ public class Workbench {
 
     // TODO add tests for standalone startup vs. full startup
     private void handleStandaloneMode(final Map<String, List<String>> parameters) {
+//        String req = URL.decode(Window.Location.getHref());
         if (parameters.containsKey("perspective") && !parameters.get("perspective").isEmpty()) {
             placeManager.goTo(new DefaultPlaceRequest(parameters.get("perspective").get(0)));
         } else if (parameters.containsKey("path") && !parameters.get("path").isEmpty()) {
@@ -274,7 +295,25 @@ public class Workbench {
                                    }
                                }
                            });
+        } else if (isAddressableUrl()) {
+            // discard unneeded part of the URL, that is, get everything after the #
+//            req = req.substring(req.indexOf('#') + 1);
+//            placeManager.restoreBookmakmarkableUrl(req);
+            startRestoreBookmarkedUrl();
+        } else {
+            // do nothing.
         }
+    }
+
+    /**
+     * Start the restore process of a URL. First get the current request
+     */
+    private void startRestoreBookmarkedUrl() {
+        String req = URL.decode(Window.Location.getHref());
+
+        // discard unneeded part of the URL, that is, get everything after the #
+        req = req.substring(req.indexOf('#') + 1);
+        placeManager.restoreBookmakmarkableUrl(req);
     }
 
     /**

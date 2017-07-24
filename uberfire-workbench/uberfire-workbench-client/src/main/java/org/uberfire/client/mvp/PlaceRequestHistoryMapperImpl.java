@@ -39,10 +39,10 @@ public class PlaceRequestHistoryMapperImpl
         final Map<String, String> parameters = getParameters(query);
 
         final PlaceRequest placeRequest;
-        if (parameters.containsKey("path_uri")) {
+        if (parameters.containsKey(PathPlaceRequest.PATH_URI_MARKER)) {
             if (parameters.containsKey("has_version_support")) {
                 placeRequest = new PathPlaceRequest(PathFactory.newPath(parameters.remove("file_name"),
-                                                                        parameters.remove("path_uri"),
+                                                                        parameters.remove(PathPlaceRequest.PATH_URI_MARKER),
                                                                         new HashMap<String, Object>() {{
                                                                             put(PathFactory.VERSION_PROPERTY,
                                                                                 Boolean.valueOf(parameters.remove("has_version_support")));
@@ -50,7 +50,7 @@ public class PlaceRequestHistoryMapperImpl
                                                     identifier);
             } else {
                 placeRequest = new PathPlaceRequest(PathFactory.newPath(parameters.remove("file_name"),
-                                                                        parameters.remove("path_uri")),
+                                                                        parameters.remove(PathPlaceRequest.PATH_URI_MARKER)),
                                                     identifier);
             }
         } else {

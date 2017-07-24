@@ -80,8 +80,8 @@ public class PathPlaceRequest extends DefaultPlaceRequest {
             fullIdentifier.append(NULL);
         }
 
-        fullIdentifier.append("?").append("path_uri").append("=").append(encode(path.toURI())).append("&")
-                .append("file_name").append("=").append(encode(path.getFileName())).append("&");
+        fullIdentifier.append("?").append(PATH_URI_MARKER).append("=").append(encode(path.toURI())).append("&")
+                .append(FILE_NAME_MARKER).append("=").append(encode(path.getFileName())).append("&");
 
         if (path instanceof IsVersioned) {
             fullIdentifier.append("has_version_support").append("=").append(((IsVersioned) path).hasVersionSupport()).append("&");
@@ -137,4 +137,7 @@ public class PathPlaceRequest extends DefaultPlaceRequest {
     public String toString() {
         return "PathPlaceRequest[\"" + identifier + "\" " + parameters + "\" " + path + "]";
     }
+
+    public static final String PATH_URI_MARKER = "path_uri";
+    public static final String FILE_NAME_MARKER = "file_name";
 }

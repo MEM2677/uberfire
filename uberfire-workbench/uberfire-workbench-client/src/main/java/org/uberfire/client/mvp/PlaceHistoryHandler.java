@@ -142,7 +142,7 @@ public class PlaceHistoryHandler {
     }
 
     /**
-     * Extract a perspective from a place
+     * Extract a perspective from a placeRequest
      * @param place
      * @return
      */
@@ -169,6 +169,11 @@ public class PlaceHistoryHandler {
                 currentBookmarkableURLStatus =
                         BookmarkableUrlHelper.registerOpenedScreen(currentBookmarkableURLStatus,
                                                                    place);
+            }
+            if (place instanceof PathPlaceRequest) {
+                currentBookmarkableURLStatus =
+                        BookmarkableUrlHelper.registerOpenedEditor(currentBookmarkableURLStatus,
+                                                                   (PathPlaceRequest) place);
             }
             updateHistoryBar();
         }

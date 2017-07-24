@@ -15,13 +15,18 @@
  */
 package org.uberfire.client.mvp;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.google.gwt.core.client.GWT;
 import org.uberfire.client.workbench.docks.UberfireDock;
 import org.uberfire.mvp.PlaceRequest;
 import org.uberfire.mvp.impl.PathPlaceRequest;
@@ -72,8 +77,8 @@ public class BookmarkableUrlHelper {
      */
     public static String registerOpenedScreen(String bookmarkableUrl,
                                               final PlaceRequest placeRequest) {
-        final String screenName = placeRequest.getFullIdentifier();
-        final String closedScreen = CLOSED_PREFIX.concat(screenName);
+        String screenName = placeRequest.getFullIdentifier();
+        String closedScreen = CLOSED_PREFIX.concat(screenName);
         final String currentBookmarkableUrl = bookmarkableUrl;
 
         if (screenWasClosed(bookmarkableUrl,
@@ -98,6 +103,10 @@ public class BookmarkableUrlHelper {
         if (isBiggerThenMaxURLSize(bookmarkableUrl)) {
             return currentBookmarkableUrl;
         }
+
+//        if (placeRequest instanceof  PathPlaceRequest) {
+//            return processPathPlaceRequest((PathPlaceRequest) placeRequest);
+//        }
         return bookmarkableUrl;
     }
 
@@ -364,6 +373,11 @@ public class BookmarkableUrlHelper {
                 + targetDock.getPlaceRequest().getFullIdentifier() + SEPARATOR;
     }
 
+    /**
+     * @param currentBookmarkableURLStatus
+     * @param targetDock
+     * @return
+     */
     public static String registerOpenedDock(String currentBookmarkableURLStatus,
                                             UberfireDock targetDock) {
         if (targetDock == null) {
@@ -393,6 +407,11 @@ public class BookmarkableUrlHelper {
         }
     }
 
+    /**
+     * @param currentBookmarkableURLStatus
+     * @param targetDock
+     * @return
+     */
     public static String registerClosedDock(String currentBookmarkableURLStatus,
                                             UberfireDock targetDock) {
         if (!isNotBlank(currentBookmarkableURLStatus)
@@ -418,7 +437,20 @@ public class BookmarkableUrlHelper {
                                              final PlaceRequest place) {
         if (place != null
                 && place instanceof PathPlaceRequest) {
-            final String path = place.getFullIdentifier();
+            final String[] fullIdentifier = {place.getFullIdentifier()};
+
+            ((PathPlaceRequest)place).getParameters().entrySet()
+                    .forEach(c -> {
+                        final String kv = c.getKey()
+                                .concat("=")
+                                .concat(c.getValue());
+                        final String nkv = c.getKey()
+                                .concat("==")
+                                .concat(c.getValue());
+                        fullIdentifier[0] =
+                                fullIdentifier[0].replace(kv, nkv);
+                    });
+            final String path = fullIdentifier[0];
             final String pathWithSep = path.concat(SEPARATOR);
 
             if (currentBookmarkableURLStatus.contains(pathWithSep)) {
@@ -430,4 +462,94 @@ public class BookmarkableUrlHelper {
         }
         return currentBookmarkableURLStatus;
     }
+
+    /**
+     * Prepend a double equal sign '==' in front of the URL of a PathPlaceRequest and
+     * related arguments
+     * @param bookmarkableUrl
+     * @param placeRequest
+     * @return
+     */
+    public static String registerOpenedEditor(String bookmarkableUrl,
+                                              PathPlaceRequest placeRequest) {
+        if (placeRequest == null) {
+            return bookmarkableUrl;
+        }
+        final String originalPathRequest = placeRequest.getFullIdentifier();
+        String effectiveRequest = originalPathRequest;
+        for (String arg : placeRequest.getParameters().keySet()) {
+            final String value = placeRequest.getParameter(arg,
+                                                           "");
+            final String kv = arg.concat("=").concat(value);
+            final String nkv = arg.concat("==").concat(value);
+
+            effectiveRequest = effectiveRequest.replace(kv,
+                                                        nkv);
+        }
+        return bookmarkableUrl.replace(originalPathRequest,
+                                       effectiveRequest);
+    }
+
+    /**
+     * Given the token of a PathPlaceRequest extract the URI and the related parameters
+     * @param token
+     * @param map
+     */
+    private static void preparePathPlaceRequestInvocation(String token,
+                                                                  Map<String, Map<String, String>> map) {
+        Map<String, String> arguments = new HashMap<String, String>();
+
+        // take the URI (everything from the '==' to the first '&')
+        final String uri = token.indexOf('&') != -1 ?
+                token.substring(1,
+                                token.indexOf('&')) : token.substring(1,
+                                                                      (token.length() - 1));
+        String[] args = token.split("&");
+        for (String arg: args) {
+            if (arg.contains("==")) {
+                String[] kv = arg.split("==");
+
+                arguments.put(kv[0], kv[1]);
+            }
+            if (arg.contains(PathPlaceRequest.FILE_NAME_MARKER)) {
+                String[] kv = arg.split("=");
+
+                arguments.put(kv[0], kv[1]);
+            }
+        }
+        map.put(uri, arguments);
+    }
+
+    /**
+     * Get the map of the PathPlaceRequest in a bookmarkable URL with the
+     * associated parameters
+     * @param bookmarkableUrl
+     * @return
+     */
+    public static Map<String, Map<String, String>> getOpenedEditorsFromUrl(final String bookmarkableUrl) {
+        Map<String, Map<String, String>> result = new HashMap<String, Map<String, String>>();
+
+        String[] paths = bookmarkableUrl.split(PathPlaceRequest.PATH_URI_MARKER);
+        for (String path : paths) {
+            if (path.contains("=")) {
+                preparePathPlaceRequestInvocation(path,
+                                                  result);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Make sure that the screen we are about to open is a valid screen name
+     * @param screen
+     * @return
+     */
+    public static boolean isValidScreen(final String screen) {
+        return (null != screen
+                && !screen.trim().equals("")
+                && !screen.contains(PathPlaceRequest.PATH_URI_MARKER)
+                && !screen.contains("=")
+        );
+    }
+
 }

@@ -15,6 +15,7 @@
  */
 package org.uberfire.client.mvp;
 
+import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -46,11 +47,11 @@ import org.jboss.errai.ioc.client.container.SyncBeanDef;
 import org.jboss.errai.ioc.client.container.SyncBeanManager;
 import org.uberfire.backend.vfs.ObservablePath;
 import org.uberfire.backend.vfs.Path;
+import org.uberfire.backend.vfs.PathFactory;
 import org.uberfire.client.menu.SplashScreenMenuPresenter;
 import org.uberfire.client.mvp.ActivityLifecycleError.LifecyclePhase;
 import org.uberfire.client.workbench.LayoutSelection;
 import org.uberfire.client.workbench.PanelManager;
-import org.uberfire.client.workbench.StandaloneEditorPerspective;
 import org.uberfire.client.workbench.WorkbenchLayout;
 import org.uberfire.client.workbench.docks.UberfireDock;
 import org.uberfire.client.workbench.docks.UberfireDockPosition;
@@ -234,7 +235,7 @@ public class PlaceManagerImpl
     public void goTo(PlaceRequest place,
                      HasWidgets addTo) {
 
-//        closeOpenPlacesAt(panelsOfThisHasWidgets(addTo));
+        closeOpenPlacesAt(panelsOfThisHasWidgets(addTo));
         goToTargetPanel(place,
                         panelManager.addCustomPanel(addTo,
                                                     UnanchoredStaticWorkbenchPanelPresenter.class.getName()));
@@ -244,8 +245,7 @@ public class PlaceManagerImpl
     public void goTo(PlaceRequest place,
                      HTMLElement addTo) {
 
-//        closeOpenPlacesAt(panelsOfThisHTMLElement(addTo));
-
+        closeOpenPlacesAt(panelsOfThisHTMLElement(addTo));
         goToTargetPanel(place,
                         panelManager.addCustomPanel(addTo,
                                                     UnanchoredStaticWorkbenchPanelPresenter.class.getName()));
@@ -285,9 +285,11 @@ public class PlaceManagerImpl
     private void goTo(final PlaceRequest place,
                       final PanelDefinition panel,
                       final Command doWhenFinished) {
+
         if (place == null || place.equals(DefaultPlaceRequest.NOWHERE)) {
             return;
         }
+
         final ResolvedRequest resolved = resolveActivity(place);
 
         if (resolved.getActivity() != null) {
@@ -332,7 +334,8 @@ public class PlaceManagerImpl
     }
 
     /**
-     * Restore the elements
+     * Restore the perspectivem screens, docked screens and editors
+     * referenced by the given bookmarkable URL
      * @param url
      */
     public void restoreBookmakmarkableUrl(final String url) {
@@ -348,19 +351,64 @@ public class PlaceManagerImpl
         final String perspectiveGeneratedUrl =
                 this.getPlaceHistoryHandler().getCurrentBookmarkableURLStatus();
         // restore non docked screens
-        final Set<String> screens = BookmarkableUrlHelper.getScreensFromPlace(restore);
-        for (String screen : screens) {
-            toggleScreen(screen,
-                         perspectiveGeneratedUrl);
-        }
+//        final Set<String> screens = BookmarkableUrlHelper.getScreensFromPlace(restore);
+//        for (String screen : screens) {
+//            // get rid of path place requests!
+//            if (!BookmarkableUrlHelper.isValidScreen(screen)) {
+//                continue;
+//            }
+//            toggleScreen(screen,
+//                         perspectiveGeneratedUrl);
+//        }
+
+        BookmarkableUrlHelper.getScreensFromPlace(restore)
+                .stream()
+                .filter(s -> BookmarkableUrlHelper.isValidScreen(s))
+                .forEach(s ->
+                                 toggleScreen(s,
+                                              perspectiveGeneratedUrl)
+                );
         // restore docked screens
-        final Set<String> docks =
-                BookmarkableUrlHelper.getDockedScreensFromPlace(restore);
-        for (String dock : docks) {
-            toggleDock(dock,
-                       perspectiveGeneratedUrl);
+//        final Set<String> docks =
+//                BookmarkableUrlHelper.getDockedScreensFromPlace(restore);
+//        for (String dock : docks) {
+//            toggleDock(dock,
+//                       perspectiveGeneratedUrl);
+//        }
+
+        BookmarkableUrlHelper.getDockedScreensFromPlace(restore)
+                .stream()
+                .forEach(s ->
+                                 toggleDock(s,
+                                              perspectiveGeneratedUrl)
+                );
+
+        // process editors
+        Map<String, Map<String, String>> map
+                = BookmarkableUrlHelper.getOpenedEditorsFromUrl(url);
+
+        for (Map.Entry<String, Map<String, String>> entry : map.entrySet()) {
+            final String uri = entry.getKey();
+            final Map<String, String> arguments = entry.getValue();
+            final String filename =
+                    null != arguments.get(PathPlaceRequest.FILE_NAME_MARKER) ?
+                            arguments.get(PathPlaceRequest.FILE_NAME_MARKER) : "unknown";
+            final Path path = PathFactory.newPath(filename,
+                                                  uri);
+            final PathPlaceRequest ppr =
+                    new PathPlaceRequest(path);
+
+            arguments.remove(PathPlaceRequest.FILE_NAME_MARKER);
+//            for (Map.Entry<String, String> arg : arguments.entrySet()) {
+//                ppr.addParameter(arg.getKey(),
+//                                 arg.getValue());
+//            }
+            arguments.entrySet()
+                    .forEach(e ->
+                                     ppr.addParameter(e.getKey(),
+                                                      e.getValue()));
+            goTo(ppr);
         }
-        // TODO process editors
     }
 
     /**
@@ -412,8 +460,6 @@ public class PlaceManagerImpl
                 this.getUberfireDocks().getDockedScreenInPerspective(perspectiveName,
                                                                      dockId,
                                                                      position);
-        GWT.log(dockName + " : positioned " + positionedDockId + " : id " + dockId + " : " + isClosed);
-
         // check if the screen was already opened upon perspective launch and if the dock exists
         if ((currentUrl.contains(dockName)
                 && !isClosed)

@@ -671,6 +671,25 @@ public class BookmarkableUrlHelperTest extends TestCase {
                      url);
     }
 
+/*
+    @Test
+    public void testRegisterOpenEditorWithScreens() {
+        final Path path = PathFactory.newPath("file",
+                                              "default://master@repo/path/to/file");
+        final PlaceRequest ppr = new PathPlaceRequest(path);
+
+
+        ppr.setIdentifier("Perspective Editor");
+        String bookmarkableUrl = "PlugInAuthoringPerspective|[WPlugins Explorer,]";
+        bookmarkableUrl = BookmarkableUrlHelper.registerOpenedScreen(bookmarkableUrl,
+                ppr);
+//        System.out.println("!!! " + bookmarkableUrl);
+        String lol = BookmarkableUrlHelper.registerOpenedEditor(bookmarkableUrl,
+                                                   (PathPlaceRequest) ppr);
+//        System.out.println(">>> " + lol);
+    }
+*/
+
     /**
      * Get a dock for the test
      * @param dockName

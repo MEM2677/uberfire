@@ -17,6 +17,7 @@ package org.uberfire.client.mvp;
 
 import java.util.Set;
 
+import com.google.gwt.junit.client.GWTTestCase;
 import com.google.gwtmockito.GwtMockitoTestRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -510,4 +511,5 @@ public class PlaceHistoryHandlerTest {
     final static String SCREEN3_ID = "screen3";
     final static String SCREEN4_ID = "screen4";
     final static String PERSPECTIVE_ID = "perspective";
+
 }

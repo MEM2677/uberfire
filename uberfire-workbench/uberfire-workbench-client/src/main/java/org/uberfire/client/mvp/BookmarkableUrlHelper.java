@@ -439,7 +439,7 @@ public class BookmarkableUrlHelper {
                 && place instanceof PathPlaceRequest) {
             final String[] fullIdentifier = {place.getFullIdentifier()};
 
-            ((PathPlaceRequest)place).getParameters().entrySet()
+            ((PathPlaceRequest) place).getParameters().entrySet()
                     .forEach(c -> {
                         final String kv = c.getKey()
                                 .concat("=")
@@ -448,7 +448,8 @@ public class BookmarkableUrlHelper {
                                 .concat("==")
                                 .concat(c.getValue());
                         fullIdentifier[0] =
-                                fullIdentifier[0].replace(kv, nkv);
+                                fullIdentifier[0].replace(kv,
+                                                          nkv);
                     });
             final String path = fullIdentifier[0];
             final String pathWithSep = path.concat(SEPARATOR);
@@ -491,12 +492,33 @@ public class BookmarkableUrlHelper {
     }
 
     /**
+     * Given a token it copies from the beginning to the last comma or
+     * ampersend
+     * @param token
+     * @return
+     */
+    private static String extractUntilDelimiter(final String token) {
+        if (token != null
+                && (token.indexOf(',') != -1
+                || token.indexOf('&') != -1)) {
+            int comma = token.lastIndexOf(',');
+            int ampersend = token.lastIndexOf('&');
+            if (comma != -1
+                    && ampersend != -1) {
+                return token.substring(0,
+                                       comma > ampersend ? comma : ampersend);
+            }
+        }
+        return token;
+    }
+
+    /**
      * Given the token of a PathPlaceRequest extract the URI and the related parameters
      * @param token
      * @param map
      */
-    private static void preparePathPlaceRequestInvocation(String token,
-                                                                  Map<String, Map<String, String>> map) {
+    private static void preparePathPlaceRequestInvocation(final String token,
+                                                          Map<String, Map<String, String>> map) {
         Map<String, String> arguments = new HashMap<String, String>();
 
         // take the URI (everything from the '==' to the first '&')
@@ -505,19 +527,22 @@ public class BookmarkableUrlHelper {
                                 token.indexOf('&')) : token.substring(1,
                                                                       (token.length() - 1));
         String[] args = token.split("&");
-        for (String arg: args) {
+        for (String arg : args) {
             if (arg.contains("==")) {
                 String[] kv = arg.split("==");
 
-                arguments.put(kv[0], kv[1]);
+                arguments.put(kv[0],
+                              kv[1]);
             }
             if (arg.contains(PathPlaceRequest.FILE_NAME_MARKER)) {
                 String[] kv = arg.split("=");
 
-                arguments.put(kv[0], kv[1]);
+                arguments.put(kv[0],
+                              kv[1]);
             }
         }
-        map.put(uri, arguments);
+        map.put(uri,
+                arguments);
     }
 
     /**
@@ -532,8 +557,9 @@ public class BookmarkableUrlHelper {
         String[] paths = bookmarkableUrl.split(PathPlaceRequest.PATH_URI_MARKER);
         for (String path : paths) {
             if (path.contains("=")) {
-                preparePathPlaceRequestInvocation(path,
-                                                  result);
+                preparePathPlaceRequestInvocation(
+                        extractUntilDelimiter(path),
+                        result);
             }
         }
         return result;
@@ -551,5 +577,4 @@ public class BookmarkableUrlHelper {
                 && !screen.contains("=")
         );
     }
-
 }

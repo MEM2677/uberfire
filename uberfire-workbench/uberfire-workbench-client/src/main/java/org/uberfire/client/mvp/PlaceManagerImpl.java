@@ -351,16 +351,6 @@ public class PlaceManagerImpl
         final String perspectiveGeneratedUrl =
                 this.getPlaceHistoryHandler().getCurrentBookmarkableURLStatus();
         // restore non docked screens
-//        final Set<String> screens = BookmarkableUrlHelper.getScreensFromPlace(restore);
-//        for (String screen : screens) {
-//            // get rid of path place requests!
-//            if (!BookmarkableUrlHelper.isValidScreen(screen)) {
-//                continue;
-//            }
-//            toggleScreen(screen,
-//                         perspectiveGeneratedUrl);
-//        }
-
         BookmarkableUrlHelper.getScreensFromPlace(restore)
                 .stream()
                 .filter(s -> BookmarkableUrlHelper.isValidScreen(s))
@@ -369,13 +359,6 @@ public class PlaceManagerImpl
                                               perspectiveGeneratedUrl)
                 );
         // restore docked screens
-//        final Set<String> docks =
-//                BookmarkableUrlHelper.getDockedScreensFromPlace(restore);
-//        for (String dock : docks) {
-//            toggleDock(dock,
-//                       perspectiveGeneratedUrl);
-//        }
-
         BookmarkableUrlHelper.getDockedScreensFromPlace(restore)
                 .stream()
                 .forEach(s ->
@@ -399,10 +382,6 @@ public class PlaceManagerImpl
                     new PathPlaceRequest(path);
 
             arguments.remove(PathPlaceRequest.FILE_NAME_MARKER);
-//            for (Map.Entry<String, String> arg : arguments.entrySet()) {
-//                ppr.addParameter(arg.getKey(),
-//                                 arg.getValue());
-//            }
             arguments.entrySet()
                     .forEach(e ->
                                      ppr.addParameter(e.getKey(),

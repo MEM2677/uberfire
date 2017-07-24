@@ -18,6 +18,7 @@ package org.uberfire.client.mvp;
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import javax.enterprise.context.Dependent;
@@ -689,6 +690,58 @@ public class BookmarkableUrlHelperTest extends TestCase {
 //        System.out.println(">>> " + lol);
     }
 */
+
+    @Test
+    public void testGetOpenedEditorsFromUrl() {
+        final String bookmarkableUrl = "PlugInAuthoringPerspective|[!WPlugins Explorer,]$Perspective Editor?path_uri=default://master@plugins/BBBB/perspective_layout.plugin&file_name=perspective_layout.plugin&has_version_support=false&name==BBBB,Editor PlugIn Editor?path_uri=default://master@plugins/AAAA/editor.plugin&file_name=editor.plugin&has_version_support=true&name==AAAA";
+
+        Map<String, Map<String, String>> editors
+                = BookmarkableUrlHelper.getOpenedEditorsFromUrl(bookmarkableUrl);
+        assertNotNull(editors);
+        assertFalse(editors.isEmpty());
+        assertEquals(2, editors.size());
+
+        for (Map.Entry<String, Map<String, String>> editor: editors.entrySet()) {
+            String key = editor.getKey();
+            Map<String, String> arguments = editor.getValue();
+
+            assertTrue(
+                    key.equals("default://master@plugins/BBBB/perspective_layout.plugin")
+                    || key.equals("default://master@plugins/AAAA/editor.plugin")
+            );
+            assertNotNull(arguments);
+            assertFalse(arguments.isEmpty());
+            assertEquals(2, arguments.size());
+            assertTrue(arguments.containsKey(PathPlaceRequest.FILE_NAME_MARKER));
+
+            assertTrue(
+                    arguments.get(PathPlaceRequest.FILE_NAME_MARKER)
+                               .equals("editor.plugin")
+                    || arguments.get(PathPlaceRequest.FILE_NAME_MARKER)
+                            .equals("perspective_layout.plugin")
+            );
+            assertTrue(
+                    arguments.get("name")
+                            .equals("AAAA")
+                            || arguments.get("name")
+                            .equals("BBBB")
+            );
+        }
+    }
+
+    @Test
+    public void testIsValidScreen() {
+        final String s1 = "screen1";
+        final String s2 = "Editor PlugIn Editor?path_uri=default://master@plugins/AAAA/editor.plugin&file_name=editor.plugin&has_version_support=true&name==AAAA";
+        final String s3 = "";
+        final String s4 = null;
+
+        assertTrue(BookmarkableUrlHelper.isValidScreen(s1));
+        assertFalse(BookmarkableUrlHelper.isValidScreen(s2));
+        assertFalse(BookmarkableUrlHelper.isValidScreen(s3));
+        assertFalse(BookmarkableUrlHelper.isValidScreen(s4));
+    }
+
 
     /**
      * Get a dock for the test

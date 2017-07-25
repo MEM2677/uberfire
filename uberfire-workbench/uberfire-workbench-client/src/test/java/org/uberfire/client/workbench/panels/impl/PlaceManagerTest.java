@@ -152,7 +152,6 @@ public class PlaceManagerTest {
     public void setup() {
         ((SyncBeanManagerImpl) IOC.getBeanManager()).reset();
 
-        when(placeHistoryHandler.getPerspectiveFromPlace(any())).then(AdditionalAnswers.returnsFirstArg());
 
         when(defaultPerspective.getIdentifier())
                 .thenReturn("DefaultPerspective");
@@ -192,9 +191,6 @@ public class PlaceManagerTest {
         when(kansasActivity.preferredWidth()).thenReturn(123);
         when(kansasActivity.preferredHeight()).thenReturn(456);
 
-        when(placeHistoryHandler.getPerspectiveFromPlace(any()))
-                .thenAnswer(i -> i.getArgumentAt(0,
-                                                 PlaceRequest.class));
         // arrange for the mock PerspectiveManager to invoke the doWhenFinished callbacks
         doAnswer(new Answer<Void>() {
             @SuppressWarnings({"rawtypes", "unchecked"})

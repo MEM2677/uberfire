@@ -142,15 +142,6 @@ public class PlaceHistoryHandler {
     }
 
     /**
-     * Extract a perspective from a placeRequest
-     * @param place
-     * @return
-     */
-    public PlaceRequest getPerspectiveFromPlace(final PlaceRequest place) {
-        return BookmarkableUrlHelper.getPerspectiveFromPlace(place);
-    }
-
-    /**
      * register opened screen of perspective
      * @param activity
      * @param place

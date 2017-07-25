@@ -16,6 +16,7 @@
 package org.uberfire.client.mvp;
 
 import java.lang.annotation.Annotation;
+import java.net.URLDecoder;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
@@ -23,6 +24,7 @@ import java.util.Set;
 
 import javax.enterprise.context.Dependent;
 
+import com.google.gwt.http.client.URL;
 import com.google.gwtmockito.GwtMockitoTestRunner;
 import junit.framework.TestCase;
 import org.jboss.errai.ioc.client.QualifierUtil;
@@ -166,51 +168,6 @@ public class BookmarkableUrlHelperTest extends TestCase {
     }
 
     @Test
-    public void testGetPerspectiveFromPlace() {
-        final String perspectiveName = "eccePerspective";
-        final String bookmarkableUrl = perspectiveName
-                .concat("|~screen1,~screen2");
-        final PlaceRequest req = new DefaultPlaceRequest(bookmarkableUrl);
-
-        PlaceRequest place = BookmarkableUrlHelper.getPerspectiveFromPlace(req);
-
-        assertNotNull(place);
-        assertNotSame(req,
-                      place);
-        assertEquals(perspectiveName,
-                     place.getFullIdentifier());
-
-        // return the same object if no perspective in URL
-        final PlaceRequest empty = new DefaultPlaceRequest("screenOpened,~screenClosed");
-        empty.addParameter("param",
-                           "value");
-        place = BookmarkableUrlHelper.getPerspectiveFromPlace(empty);
-        assertNotNull(place);
-        assertEquals(empty.getFullIdentifier(),
-                     place.getFullIdentifier());
-    }
-
-    @Test
-    public void testGetPerspectiveFromPlaceWithParams() {
-        final String perspectiveName = "eccePerspective";
-        final String bookmarkableUrl = perspectiveName
-                .concat("|~screen1,~screen2");
-        final PlaceRequest req = new DefaultPlaceRequest(bookmarkableUrl);
-
-        req.addParameter("param",
-                         "value");
-        PlaceRequest place = BookmarkableUrlHelper.getPerspectiveFromPlace(req);
-
-        assertNotNull(place);
-        assertNotSame(req,
-                      place);
-        StringBuilder expected = new StringBuilder(perspectiveName);
-        expected.append("?param=value");
-        assertEquals(expected.toString(),
-                     place.getFullIdentifier());
-    }
-
-    @Test
     public void testIsPerspectiveScreen() {
         final String url = "perspective|screen1,screen2$screen3,screen4";
 
@@ -279,18 +236,13 @@ public class BookmarkableUrlHelperTest extends TestCase {
     }
 
     @Test
-    public void testGetScreensFromPlace() {
-        final String url = "perspective|~screen1,screen2$!screen3,screen4";
+    public void testGetScreensFromUrl() {
+        final String url1 = "perspective|~screen1,screen2$!screen3,screen4";
         final String url2 = "UFWidgets|PagedTableScreen[ESimpleDockScreen,!WSimpleDockScreen,ESimpleDockScreen,]";
         final String url3 = "PagedTableScreen[ESimpleDockScreen,!WSimpleDockScreen,ESimpleDockScreen,]";
         final String url4 = "perspective|[!WSimpleDockedScreen,]";
-        final PlaceRequest place = new DefaultPlaceRequest(url);
-        final PlaceRequest place2 = new DefaultPlaceRequest(url2);
-        final PlaceRequest placeNoPerspective = new DefaultPlaceRequest(url3);
-        final PlaceRequest placeNoScreen = new DefaultPlaceRequest(url4);
-        final PlaceRequest placeNull = null;
 
-        Set<String> set = BookmarkableUrlHelper.getScreensFromPlace(place);
+        Set<String> set = BookmarkableUrlHelper.getScreensFromUrl(url1);
         assertNotNull(set);
         assertFalse(set.isEmpty());
 
@@ -301,7 +253,7 @@ public class BookmarkableUrlHelperTest extends TestCase {
         assertTrue(set.contains("!screen3"));
         assertTrue(set.contains("screen4"));
 
-        set = BookmarkableUrlHelper.getScreensFromPlace(place2);
+        set = BookmarkableUrlHelper.getScreensFromUrl(url2);
         assertNotNull(set);
 
         assertFalse(set.isEmpty());
@@ -309,73 +261,32 @@ public class BookmarkableUrlHelperTest extends TestCase {
                      set.size());
         assertTrue(set.contains("PagedTableScreen"));
 
-        set = BookmarkableUrlHelper.getScreensFromPlace(placeNull);
+        set = BookmarkableUrlHelper.getScreensFromUrl(null);
         assertNotNull(set);
         assertTrue(set.isEmpty());
 
         // test with bookmarkable URL with no perspective
-        set = BookmarkableUrlHelper.getScreensFromPlace(placeNoPerspective);
+        set = BookmarkableUrlHelper.getScreensFromUrl(url3);
         assertNotNull(set);
         assertFalse(set.isEmpty());
         assertTrue(set.contains("PagedTableScreen"));
 
         // test URL with no screens
-        set = BookmarkableUrlHelper.getScreensFromPlace(placeNoScreen);
+        set = BookmarkableUrlHelper.getScreensFromUrl(url4);
         assertNotNull(set);
         assertTrue(set.isEmpty());
-    }
-
-    @Test
-    public void testGetClosedScreenFromPlace() {
-        final String url = "perspective|~screen1,screen2$~screen3,screen4";
-        final String url2 = "UFWidgets|PagedTableScreen[ESimpleDockScreen,!WSimpleDockScreen,ESimpleDockScreen,]";
-        final PlaceRequest place = new DefaultPlaceRequest(url);
-        final PlaceRequest place2 = new DefaultPlaceRequest(url2);
-
-        Set<String> set = BookmarkableUrlHelper.getClosedScreenFromPlace(place);
-        assertNotNull(set);
-        assertFalse(set.isEmpty());
-        assertEquals(2,
-                     set.size());
-        assertTrue(set.contains("~screen1"));
-        assertTrue(set.contains("~screen3"));
-
-        set = BookmarkableUrlHelper.getClosedScreenFromPlace(place2);
-        assertNotNull(set);
-        assertTrue(set.isEmpty());
-    }
-
-    @Test
-    public void testGetOpenedScreenFromPlace() {
-        final String url = "perspective|~screen1,screen2$~screen3,screen4";
-        final String url2 = "UFWidgets|PagedTableScreen[ESimpleDockScreen,!WSimpleDockScreen,ESimpleDockScreen,]";
-        final PlaceRequest place = new DefaultPlaceRequest(url);
-        final PlaceRequest place2 = new DefaultPlaceRequest(url2);
-
-        Set<String> set = BookmarkableUrlHelper.getOpenedScreenFromPlace(place);
-        assertNotNull(set);
-        assertFalse(set.isEmpty());
-        assertTrue(set.contains("screen2"));
-        assertTrue(set.contains("screen4"));
-
-        set = BookmarkableUrlHelper.getOpenedScreenFromPlace(place2);
-        assertNotNull(set);
-        assertFalse(set.isEmpty());
-        assertTrue(set.contains("PagedTableScreen"));
     }
 
     @Test
     public void testGDockedScreensFromPlace() {
-        final String url = "perspective|~screen1,screen2$~screen3,screen4";
+        final String url1 = "perspective|~screen1,screen2$~screen3,screen4";
         final String url2 = "UFWidgets|PagedTableScreen[ESimpleDockScreen,!WSimpleDockScreen,ESimpleDockScreen,]";
-        final PlaceRequest place = new DefaultPlaceRequest(url);
-        final PlaceRequest place2 = new DefaultPlaceRequest(url2);
 
-        Set<String> set = BookmarkableUrlHelper.getDockedScreensFromPlace(place);
+        Set<String> set = BookmarkableUrlHelper.getDockedScreensFromUrl(url1);
         assertNotNull(set);
         assertTrue(set.isEmpty());
 
-        set = BookmarkableUrlHelper.getDockedScreensFromPlace(place2);
+        set = BookmarkableUrlHelper.getDockedScreensFromUrl(url2);
         assertNotNull(set);
         assertFalse(set.isEmpty());
         assertEquals(2,
@@ -384,7 +295,7 @@ public class BookmarkableUrlHelperTest extends TestCase {
         assertTrue(set.contains("!WSimpleDockScreen"));
 
         // test with invalid URL
-        set = BookmarkableUrlHelper.getDockedScreensFromPlace(null);
+        set = BookmarkableUrlHelper.getDockedScreensFromUrl(null);
         assertNotNull(set);
         assertTrue(set.isEmpty());
     }
@@ -672,24 +583,39 @@ public class BookmarkableUrlHelperTest extends TestCase {
                      url);
     }
 
-/*
     @Test
     public void testRegisterOpenEditorWithScreens() {
-        final Path path = PathFactory.newPath("file",
-                                              "default://master@repo/path/to/file");
+        final String PATH = "default://master@repo/path/to/file";
+        final String FILE = "generic_file";
+        final Path path = PathFactory.newPath(FILE,
+                                              PATH);
         final PlaceRequest ppr = new PathPlaceRequest(path);
-
 
         ppr.setIdentifier("Perspective Editor");
         String bookmarkableUrl = "PlugInAuthoringPerspective|[WPlugins Explorer,]";
         bookmarkableUrl = BookmarkableUrlHelper.registerOpenedScreen(bookmarkableUrl,
-                ppr);
-//        System.out.println("!!! " + bookmarkableUrl);
-        String lol = BookmarkableUrlHelper.registerOpenedEditor(bookmarkableUrl,
-                                                   (PathPlaceRequest) ppr);
-//        System.out.println(">>> " + lol);
+                                                                     ppr);
+        assertEquals("PlugInAuthoringPerspective|[WPlugins Explorer,]$Perspective Editor?path_uri=default%3A%2F%2Fmaster%40repo%2Fpath%2Fto%2Ffile&file_name=generic_file&has_version_support=false",
+                     bookmarkableUrl);
+        // add the same editor again
+        bookmarkableUrl = BookmarkableUrlHelper.registerOpenedEditor(bookmarkableUrl,
+                                                                     (PathPlaceRequest) ppr);
+        Map<String, Map<String, String>> editors =
+                BookmarkableUrlHelper.getOpenedEditorsFromUrl(bookmarkableUrl);
+        assertNotNull(editors);
+        assertFalse(editors.isEmpty());
+        assertEquals(1,
+                     editors.size());
+        assertTrue(editors.containsKey("default%3A%2F%2Fmaster%40repo%2Fpath%2Fto%2Ffile"));
+        Map<String, String> arguments = editors.get("default%3A%2F%2Fmaster%40repo%2Fpath%2Fto%2Ffile");
+        assertNotNull(arguments);
+        assertFalse(arguments.isEmpty());
+        assertEquals(1,
+                     arguments.size());
+        assertTrue(arguments.containsKey(PathPlaceRequest.FILE_NAME_MARKER));
+        assertEquals(FILE,
+                     arguments.get(PathPlaceRequest.FILE_NAME_MARKER));
     }
-*/
 
     @Test
     public void testGetOpenedEditorsFromUrl() {
@@ -699,25 +625,27 @@ public class BookmarkableUrlHelperTest extends TestCase {
                 = BookmarkableUrlHelper.getOpenedEditorsFromUrl(bookmarkableUrl);
         assertNotNull(editors);
         assertFalse(editors.isEmpty());
-        assertEquals(2, editors.size());
+        assertEquals(2,
+                     editors.size());
 
-        for (Map.Entry<String, Map<String, String>> editor: editors.entrySet()) {
+        for (Map.Entry<String, Map<String, String>> editor : editors.entrySet()) {
             String key = editor.getKey();
             Map<String, String> arguments = editor.getValue();
 
             assertTrue(
                     key.equals("default://master@plugins/BBBB/perspective_layout.plugin")
-                    || key.equals("default://master@plugins/AAAA/editor.plugin")
+                            || key.equals("default://master@plugins/AAAA/editor.plugin")
             );
             assertNotNull(arguments);
             assertFalse(arguments.isEmpty());
-            assertEquals(2, arguments.size());
+            assertEquals(2,
+                         arguments.size());
             assertTrue(arguments.containsKey(PathPlaceRequest.FILE_NAME_MARKER));
 
             assertTrue(
                     arguments.get(PathPlaceRequest.FILE_NAME_MARKER)
-                               .equals("editor.plugin")
-                    || arguments.get(PathPlaceRequest.FILE_NAME_MARKER)
+                            .equals("editor.plugin")
+                            || arguments.get(PathPlaceRequest.FILE_NAME_MARKER)
                             .equals("perspective_layout.plugin")
             );
             assertTrue(
@@ -742,6 +670,30 @@ public class BookmarkableUrlHelperTest extends TestCase {
         assertFalse(BookmarkableUrlHelper.isValidScreen(s4));
     }
 
+    @Test
+    public void testGetPerspectiveFromUrl() {
+        final String u1 = "PlugInAuthoringPerspective|[!WPlugins Explorer,]$Screen PlugIn Editor?path_uri=default://master@plugins/CCCC/screen.plugin&file_name=screen.plugin&has_version_support=false&name==CCCC,Perspective Editor?path_uri=default://master@plugins/AAA/perspective_layout.plugin&file_name=perspective_layout.plugin&has_version_support=false&name==AAA,Editor PlugIn Editor?path_uri=default://master@plugins/BBBB/editor.plugin&file_name=editor.plugin&has_version_support=false&name==BBBB";
+        final String u3 = "   ";
+        final String u4 = "perspective";
+        final String u5 = "anotherPerspective|screen1,~screen2";
+
+        PlaceRequest p1 = BookmarkableUrlHelper.getPerspectiveFromUrl(u1);
+        PlaceRequest p2 = BookmarkableUrlHelper.getPerspectiveFromUrl(null);
+        PlaceRequest p3 = BookmarkableUrlHelper.getPerspectiveFromUrl(u3);
+        PlaceRequest p4 = BookmarkableUrlHelper.getPerspectiveFromUrl(u4);
+        PlaceRequest p5 = BookmarkableUrlHelper.getPerspectiveFromUrl(u5);
+        assertNotNull(p1);
+        assertEquals("PlugInAuthoringPerspective",
+                     p1.getFullIdentifier());
+        assertNull(p2);
+        assertNull(p3);
+        assertNotNull(p4);
+        assertEquals("perspective",
+                     p4.getFullIdentifier());
+        assertNotNull(p5);
+        assertEquals("anotherPerspective",
+                     p5.getFullIdentifier());
+    }
 
     /**
      * Get a dock for the test

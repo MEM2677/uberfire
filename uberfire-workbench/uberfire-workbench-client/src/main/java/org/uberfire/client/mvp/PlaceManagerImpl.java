@@ -15,7 +15,6 @@
  */
 package org.uberfire.client.mvp;
 
-import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -32,7 +31,6 @@ import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 
-import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.user.client.ui.HasWidgets;
 import com.google.gwt.user.client.ui.IsWidget;
@@ -343,15 +341,14 @@ public class PlaceManagerImpl
             return;
         }
         getPlaceHistoryHandler().flush();
-        final PlaceRequest restore = new DefaultPlaceRequest(url);
         final PlaceRequest perspective =
-                getPlaceHistoryHandler().getPerspectiveFromPlace(restore);
+                BookmarkableUrlHelper.getPerspectiveFromUrl(url);
         // restore perspective
         goTo(perspective);
         final String perspectiveGeneratedUrl =
                 this.getPlaceHistoryHandler().getCurrentBookmarkableURLStatus();
         // restore non docked screens
-        BookmarkableUrlHelper.getScreensFromPlace(restore)
+        BookmarkableUrlHelper.getScreensFromUrl(url)
                 .stream()
                 .filter(s -> BookmarkableUrlHelper.isValidScreen(s))
                 .forEach(s ->
@@ -359,18 +356,18 @@ public class PlaceManagerImpl
                                               perspectiveGeneratedUrl)
                 );
         // restore docked screens
-        BookmarkableUrlHelper.getDockedScreensFromPlace(restore)
+        BookmarkableUrlHelper.getDockedScreensFromUrl(url)
                 .stream()
+                .filter(s -> BookmarkableUrlHelper.isValidScreen(s))
                 .forEach(s ->
                                  toggleDock(s,
-                                              perspectiveGeneratedUrl)
+                                            perspectiveGeneratedUrl)
                 );
 
         // process editors
         Map<String, Map<String, String>> map
                 = BookmarkableUrlHelper.getOpenedEditorsFromUrl(url);
-
-        for (Map.Entry<String, Map<String, String>> entry : map.entrySet()) {
+        map.entrySet().forEach(entry -> {
             final String uri = entry.getKey();
             final Map<String, String> arguments = entry.getValue();
             final String filename =
@@ -381,13 +378,17 @@ public class PlaceManagerImpl
             final PathPlaceRequest ppr =
                     new PathPlaceRequest(path);
 
+//            GWT.log("opening editor: " + uri);
+//            GWT.log(" filename: " + filename);
             arguments.remove(PathPlaceRequest.FILE_NAME_MARKER);
             arguments.entrySet()
-                    .forEach(e ->
-                                     ppr.addParameter(e.getKey(),
-                                                      e.getValue()));
+                    .forEach(e -> {
+                        ppr.addParameter(e.getKey(),
+                                         e.getValue());
+//                        GWT.log(" parameter " + e.getKey() + ":" + e.getValue());
+                    });
             goTo(ppr);
-        }
+        });
     }
 
     /**

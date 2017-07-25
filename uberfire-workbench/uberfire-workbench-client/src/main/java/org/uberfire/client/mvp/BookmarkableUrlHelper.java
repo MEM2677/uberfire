@@ -15,20 +15,17 @@
  */
 package org.uberfire.client.mvp;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
-import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.shared.GWT;
 import org.uberfire.client.workbench.docks.UberfireDock;
 import org.uberfire.mvp.PlaceRequest;
+import org.uberfire.mvp.impl.DefaultPlaceRequest;
 import org.uberfire.mvp.impl.PathPlaceRequest;
 
 /**
@@ -103,10 +100,6 @@ public class BookmarkableUrlHelper {
         if (isBiggerThenMaxURLSize(bookmarkableUrl)) {
             return currentBookmarkableUrl;
         }
-
-//        if (placeRequest instanceof  PathPlaceRequest) {
-//            return processPathPlaceRequest((PathPlaceRequest) placeRequest);
-//        }
         return bookmarkableUrl;
     }
 
@@ -165,26 +158,23 @@ public class BookmarkableUrlHelper {
     }
 
     /**
-     * Return a placeRequest to the perspective only; the rest of the bookmarkable URL
-     * is ignored
-     * @param place bookmarkable URL
-     * @return a new placeRequets object pointing to the perspective of the input param
+     * Get the perspective from a bookmarkable URL
+     * @param url
+     * @return
      */
-    public static PlaceRequest getPerspectiveFromPlace(PlaceRequest place) {
-        String url = place.getFullIdentifier();
+    public static PlaceRequest getPerspectiveFromUrl(final String url) {
+        PlaceRequest place = null;
 
-        if (isPerspectiveInUrl(url)) {
-            String perspectiveName = url.substring(0,
-                                                   url.indexOf(PERSPECTIVE_SEP));
-            PlaceRequest copy = place.clone();
-            copy.setIdentifier(perspectiveName);
-            if (!place.getParameters().isEmpty()) {
-                for (Map.Entry<String, String> elem : place.getParameters().entrySet()) {
-                    copy.addParameter(elem.getKey(),
-                                      elem.getValue());
-                }
+        if (isNotBlank(url)) {
+            if (isPerspectiveInUrl(url)) {
+                // standard case, full bookmarkable URL
+                String perspectiveName = url.substring(0,
+                                                       url.indexOf(PERSPECTIVE_SEP));
+                place = new DefaultPlaceRequest(perspectiveName);
+            } else if (isValidScreen(url)) {
+                // just in case there is ONLY one screen id in the URL
+                place = new DefaultPlaceRequest(url);
             }
-            return copy;
         }
         return place;
     }
@@ -207,7 +197,7 @@ public class BookmarkableUrlHelper {
      * @return
      */
     public static boolean isPerspectiveInUrl(final String url) {
-        return (isNotBlank(url) && (url.indexOf(PERSPECTIVE_SEP) > 0));
+        return (isNotBlank(url) && (url.indexOf(PERSPECTIVE_SEP) != -1));
     }
 
     /**
@@ -226,14 +216,16 @@ public class BookmarkableUrlHelper {
      */
     public static String getUrlToken(final String bookmarkableUrl,
                                      final String screen) {
-        int st = isPerspectiveInUrl(bookmarkableUrl) ? (bookmarkableUrl.indexOf(PERSPECTIVE_SEP) + 1) : 0;
+
+        int st = isPerspectiveInUrl(bookmarkableUrl) ?
+                (bookmarkableUrl.indexOf(PERSPECTIVE_SEP) + 1) : 0;
         String screensList = bookmarkableUrl.replace(OTHER_SCREEN_SEP,
                                                      SEPARATOR)
                 .substring(st,
                            bookmarkableUrl.length());
 
         String tokens[] = screensList.split(SEPARATOR);
-        Optional<String> token = Arrays.asList(tokens).stream()
+        Optional<String> token = Arrays.stream(tokens)
                 .filter(s -> s.contains(screen))
                 .findFirst();
 
@@ -266,42 +258,23 @@ public class BookmarkableUrlHelper {
     }
 
     /**
-     * Return all the docked screens
-     * @param place
-     * @return
-     * @note non-docked screens are not taken into consideration
-     */
-    public static Set<String> getDockedScreensFromPlace(final PlaceRequest place) {
-        if (null != place) {
-            return getDockedScreensFromUrl(place.getFullIdentifier());
-        }
-        return new HashSet<>();
-    }
-
-    /**
      * Return all the screens (opened or closed) that is, everything
      * after the perspective declaration
-     * @param place
+     * @param url
      * @return
-     * @note docked screens are not taken into consideration
      */
-    public static Set<String> getScreensFromPlace(final PlaceRequest place) {
-        String url;
+    public static Set<String> getScreensFromUrl(String url) {
+        HashSet<String> result = new HashSet<>();
+        String docks;
         int start;
         int end;
-        String docks;
-        HashSet<String> result = new HashSet<>();
 
-        if (!isNotBlank(place)) {
+        if (!isNotBlank(url)) {
             return new HashSet<>();
         }
         // get everything after the perspective
-        if (isPerspectiveInUrl(place.getFullIdentifier())) {
-            String request = place.getFullIdentifier();
-
-            url = request.substring(request.indexOf(PERSPECTIVE_SEP) + 1);
-        } else {
-            url = place.getFullIdentifier();
+        if (isPerspectiveInUrl(url)) {
+            url = url.substring(url.indexOf(PERSPECTIVE_SEP) + 1);
         }
         // get the docks and the screens list
         start = url.indexOf(DOCK_BEGIN_SEP);
@@ -320,32 +293,6 @@ public class BookmarkableUrlHelper {
             String[] token = url.split(SEPARATOR);
             result = new HashSet<>(Arrays.asList(token));
         }
-        return result;
-    }
-
-    /**
-     * Get the closed screens in the given place request
-     * @param place
-     * @return
-     */
-    public static Set<String> getClosedScreenFromPlace(final PlaceRequest place) {
-        Set<String> screens = getScreensFromPlace(place);
-        Set<String> result = screens.stream()
-                .filter(s -> s.startsWith(CLOSED_PREFIX))
-                .collect(Collectors.toSet());
-        return result;
-    }
-
-    /**
-     * Get the opened screens in the given place request
-     * @param place
-     * @return
-     */
-    public static Set<String> getOpenedScreenFromPlace(final PlaceRequest place) {
-        Set<String> screens = getScreensFromPlace(place);
-        Set<String> result = screens.stream()
-                .filter(s -> !s.startsWith(CLOSED_PREFIX))
-                .collect(Collectors.toSet());
         return result;
     }
 
@@ -497,7 +444,7 @@ public class BookmarkableUrlHelper {
      * @param token
      * @return
      */
-    private static String extractUntilDelimiter(final String token) {
+    private static String extractUntilLastDelimiter(final String token) {
         if (token != null
                 && (token.indexOf(',') != -1
                 || token.indexOf('&') != -1)) {
@@ -527,7 +474,7 @@ public class BookmarkableUrlHelper {
                                 token.indexOf('&')) : token.substring(1,
                                                                       (token.length() - 1));
         String[] args = token.split("&");
-        for (String arg : args) {
+        Arrays.stream(args).forEach(arg -> {
             if (arg.contains("==")) {
                 String[] kv = arg.split("==");
 
@@ -540,7 +487,7 @@ public class BookmarkableUrlHelper {
                 arguments.put(kv[0],
                               kv[1]);
             }
-        }
+        });
         map.put(uri,
                 arguments);
     }
@@ -557,8 +504,9 @@ public class BookmarkableUrlHelper {
         String[] paths = bookmarkableUrl.split(PathPlaceRequest.PATH_URI_MARKER);
         for (String path : paths) {
             if (path.contains("=")) {
+                // note: splitting by 'path_uri' requires  truncate to the last comma
                 preparePathPlaceRequestInvocation(
-                        extractUntilDelimiter(path),
+                        extractUntilLastDelimiter(path),
                         result);
             }
         }
@@ -567,6 +515,7 @@ public class BookmarkableUrlHelper {
 
     /**
      * Make sure that the screen we are about to open is a valid screen name
+     * Marker for 'Closed' are allowed
      * @param screen
      * @return
      */
@@ -575,6 +524,12 @@ public class BookmarkableUrlHelper {
                 && !screen.trim().equals("")
                 && !screen.contains(PathPlaceRequest.PATH_URI_MARKER)
                 && !screen.contains("=")
+                && !screen.contains(BookmarkableUrlHelper.SEPARATOR)
+                && !screen.contains("&")
+                && !screen.contains(BookmarkableUrlHelper.DOCK_BEGIN_SEP)
+                && !screen.contains(BookmarkableUrlHelper.DOCK_CLOSE_SEP)
+                && !screen.contains(BookmarkableUrlHelper.OTHER_SCREEN_SEP)
+                && !screen.contains(BookmarkableUrlHelper.PERSPECTIVE_SEP)
         );
     }
 }

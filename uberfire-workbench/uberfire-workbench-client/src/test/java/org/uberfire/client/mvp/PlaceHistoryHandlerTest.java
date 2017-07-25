@@ -64,32 +64,6 @@ public class PlaceHistoryHandlerTest {
     }
 
     @Test
-    public void testPerspectiveFromUrlSimple() {
-        PlaceRequest req = new DefaultPlaceRequest("perspective");
-
-        PlaceRequest place = BookmarkableUrlHelper.getPerspectiveFromPlace(req);
-        assertNotNull(place);
-        assertEquals("perspective",
-                     place.getIdentifier());
-        assertSame(place,
-                   req);
-    }
-
-    @Test
-    public void testPerspectiveFromUrlWithHistory() {
-        final String REQUEST = "perspective|secreenOne,~screenTwo$screenThree";
-
-        PlaceRequest req = new DefaultPlaceRequest(REQUEST);
-
-        PlaceRequest place = BookmarkableUrlHelper.getPerspectiveFromPlace(req);
-        assertNotNull(place);
-        assertEquals("perspective",
-                     place.getIdentifier());
-        assertNotSame(place,
-                      req);
-    }
-
-    @Test
     public void testRegisterExistingURL() {
         final String REQUEST = "perspective|secreenOne,~screenTwo$screenThree";
         final PlaceRequest req = new DefaultPlaceRequest(REQUEST);
@@ -389,34 +363,6 @@ public class PlaceHistoryHandlerTest {
                             > BookmarkableUrlHelper.MAX_NAV_URL_SIZE);
     }
 
-    @Test
-    public void testGetOpenScreens() {
-        final String url = "perspective|screen1,!screen2,~screen3$!screen4";
-        final PlaceRequest req = new DefaultPlaceRequest(url);
-
-        Set<String> opened = BookmarkableUrlHelper.getOpenedScreenFromPlace(req);
-        assertNotNull(opened);
-        assertEquals(3L,
-                     opened.size());
-        assertTrue(opened.contains(SCREEN1_ID));
-        assertTrue(opened.contains("!" + SCREEN2_ID));
-        assertTrue(opened.contains("!" + SCREEN4_ID));
-    }
-
-    @Test
-    public void testGetClosedScreens() {
-        final String url = "perspective|screen1,~!screen2,~screen3$~!screen4";
-        final PlaceRequest req = new DefaultPlaceRequest(url);
-
-        Set<String> closed = BookmarkableUrlHelper.getClosedScreenFromPlace(req);
-        assertNotNull(closed);
-        assertEquals(3L,
-                     closed.size());
-        assertTrue(closed.contains("~" + SCREEN3_ID));
-        assertTrue(closed.contains("~!" + SCREEN2_ID));
-        assertTrue(closed.contains("~!" + SCREEN4_ID));
-    }
-
     /**
      * Prepare an URL -> perspective|screen1,screen2$screen3,screen4
      */
@@ -511,5 +457,4 @@ public class PlaceHistoryHandlerTest {
     final static String SCREEN3_ID = "screen3";
     final static String SCREEN4_ID = "screen4";
     final static String PERSPECTIVE_ID = "perspective";
-
 }

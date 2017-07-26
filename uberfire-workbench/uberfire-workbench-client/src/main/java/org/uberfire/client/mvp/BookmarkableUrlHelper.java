@@ -515,7 +515,7 @@ public class BookmarkableUrlHelper {
 
     /**
      * Make sure that the screen we are about to open is a valid screen name
-     * Marker for 'Closed' are allowed
+     * Marker for 'Closed' screen or docked screen is allowed
      * @param screen
      * @return
      */

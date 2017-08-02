@@ -523,6 +523,7 @@ public class BookmarkableUrlHelper {
         return (null != screen
                 && !screen.trim().equals("")
                 && !screen.contains(PathPlaceRequest.PATH_URI_MARKER)
+                && !screen.contains(PathPlaceRequest.FILE_NAME_MARKER)
                 && !screen.contains("=")
                 && !screen.contains(BookmarkableUrlHelper.SEPARATOR)
                 && !screen.contains("&")

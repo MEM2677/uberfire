@@ -389,6 +389,7 @@ public class PlaceManagerImpl
                     });
             goTo(ppr);
         });
+
     }
 
     /**
@@ -406,12 +407,13 @@ public class PlaceManagerImpl
             return;
         }
         if (!screendName.startsWith(BookmarkableUrlHelper.CLOSED_PREFIX)) {
+//            GWT.log("restoring screen: " + screendName);
             // open screen
             goTo(screendName);
         } else {
             // close screen
             final String id = screendName.substring(1);
-
+//            GWT.log("closing screen: " + screendName);
             closePlace(id);
         }
     }
@@ -447,8 +449,10 @@ public class PlaceManagerImpl
             return;
         }
         if (isClosed) {
+//            GWT.log("closing docked screen: " + dock.getIdentifier());
             getUberfireDocks().close(dock);
         } else {
+//            GWT.log("opening docked screen: " + dock.getIdentifier());
             getUberfireDocks().open(dock);
         }
     }

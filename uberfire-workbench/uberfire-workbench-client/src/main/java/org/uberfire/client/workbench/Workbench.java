@@ -30,6 +30,9 @@ import javax.inject.Inject;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.Scheduler;
+import com.google.gwt.dom.client.BodyElement;
+import com.google.gwt.dom.client.Document;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.event.logical.shared.ResizeEvent;
 import com.google.gwt.event.logical.shared.ResizeHandler;
 import com.google.gwt.http.client.URL;
@@ -296,9 +299,6 @@ public class Workbench {
                                }
                            });
         } else if (isAddressableUrl()) {
-            // discard unneeded part of the URL, that is, get everything after the #
-//            req = req.substring(req.indexOf('#') + 1);
-//            placeManager.restoreBookmakmarkableUrl(req);
             startRestoreBookmarkedUrl();
         } else {
             // do nothing.

@@ -31,9 +31,11 @@ import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.user.client.ui.HasWidgets;
 import com.google.gwt.user.client.ui.IsWidget;
+import com.google.gwt.user.client.ui.Widget;
 import com.google.web.bindery.event.shared.EventBus;
 import com.google.web.bindery.event.shared.SimpleEventBus;
 import jsinterop.annotations.JsMethod;
@@ -201,9 +203,25 @@ public class PlaceManagerImpl
 
     @Override
     public void goTo(PlaceRequest place,
-                     HasWidgets addTo) {
+                     final  HasWidgets addTo) {
 
         closeOpenPlacesAt(panelsOfThisHasWidgets(addTo));
+
+        Widget array[] = new Widget[1];
+
+        addTo.forEach(s -> {
+            if (null == s.getElement().getId()
+                    || s.getElement().getId().trim().equals("")) {
+                array[0] = s;
+            }
+        });
+
+        if (null != array[0]) {
+            GWT.log("WARNING: goTo() method has been called with the HasWidgets object having at least one widget with ID: ignoring! ");
+
+            return;
+        }
+        GWT.log("--1--");
         goToTargetPanel(place,
                         panelManager.addCustomPanel(addTo,
                                                     UnanchoredStaticWorkbenchPanelPresenter.class.getName()));
@@ -211,8 +229,15 @@ public class PlaceManagerImpl
 
     @Override
     public void goTo(PlaceRequest place,
-                     HTMLElement addTo) {
+                     final HTMLElement addTo) {
 
+        if (null == addTo.getId()
+                || addTo.getId().trim().equals("")) {
+            GWT.log("WARNING: goTo() method has been called with the HTMLElement parameter with no ID: ignoring! ");
+
+            return;
+        }
+        GWT.log("--2--");
         closeOpenPlacesAt(panelsOfThisHTMLElement(addTo));
 
         goToTargetPanel(place,

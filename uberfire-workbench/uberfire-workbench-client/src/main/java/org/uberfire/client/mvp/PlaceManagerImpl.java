@@ -133,8 +133,8 @@ public class PlaceManagerImpl
     @PostConstruct
     public void initPlaceHistoryHandler() {
         getPlaceHistoryHandler().initialize(this,
-                                          produceEventBus(),
-                                          DefaultPlaceRequest.NOWHERE);
+                                            produceEventBus(),
+                                            DefaultPlaceRequest.NOWHERE);
         workbenchLayout = layoutSelection.get();
     }
 
@@ -203,12 +203,11 @@ public class PlaceManagerImpl
 
     @Override
     public void goTo(PlaceRequest place,
-                     final  HasWidgets addTo) {
+                     final HasWidgets addTo) {
 
         closeOpenPlacesAt(panelsOfThisHasWidgets(addTo));
-
+/*
         Widget array[] = new Widget[1];
-
         addTo.forEach(s -> {
             if (null == s.getElement().getId()
                     || s.getElement().getId().trim().equals("")) {
@@ -219,9 +218,9 @@ public class PlaceManagerImpl
         if (null != array[0]) {
             GWT.log("WARNING: goTo() method has been called with the HasWidgets object having at least one widget with ID: ignoring! ");
 
-            return;
+            place.setUpdateLocationBar(false);
         }
-        GWT.log("--1--");
+*/
         goToTargetPanel(place,
                         panelManager.addCustomPanel(addTo,
                                                     UnanchoredStaticWorkbenchPanelPresenter.class.getName()));
@@ -233,11 +232,11 @@ public class PlaceManagerImpl
 
         if (null == addTo.getId()
                 || addTo.getId().trim().equals("")) {
-            GWT.log("WARNING: goTo() method has been called with the HTMLElement parameter with no ID: ignoring! ");
+            // prevent URL from being updated
+            place.setUpdateLocationBar(false);
 
-            return;
+            GWT.log("WARNING: goTo() method has been called with the HTMLElement parameter with no ID: ignoring! ");
         }
-        GWT.log("--2--");
         closeOpenPlacesAt(panelsOfThisHTMLElement(addTo));
 
         goToTargetPanel(place,
@@ -813,7 +812,6 @@ public class PlaceManagerImpl
         if (activePopups.get(place.getIdentifier()) != null) {
             return;
         }
-
 
         activePopups.put(place.getIdentifier(),
                          activity);

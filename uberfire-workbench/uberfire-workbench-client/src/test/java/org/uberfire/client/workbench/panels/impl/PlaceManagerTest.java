@@ -263,8 +263,8 @@ public class PlaceManagerTest {
         placeManager.initPlaceHistoryHandler();
 
         verify(placeHistoryHandler).initialize(any(PlaceManager.class),
-                                             any(EventBus.class),
-                                             any(PlaceRequest.class));
+                                               any(EventBus.class),
+                                               any(PlaceRequest.class));
     }
 
     @Test
@@ -934,7 +934,7 @@ public class PlaceManagerTest {
         when(emeraldCityActivity2.isType(ActivityResourceType.SCREEN.name())).thenReturn(true);
 
         placeManagerSpy.goTo(emeraldCityPlace,
-                               panel);
+                             panel);
 
         verifyActivityLaunchSideEffects(emeraldCityPlace,
                                         emeraldCityActivity,
@@ -956,7 +956,7 @@ public class PlaceManagerTest {
         when(customPanelDef.getParts()).thenReturn(parts);
 
         placeManagerSpy.goTo(emeraldCityPlace2,
-                               panel);
+                             panel);
 
         verifyActivityLaunchSideEffects(emeraldCityPlace2,
                                         emeraldCityActivity2,
@@ -1181,6 +1181,36 @@ public class PlaceManagerTest {
         placeManager.goTo(emeraldCityPlace,
                           customContainer);
         placeManager.closePlace(emeraldCityPlace);
+
+        // the HTML element DOES NOT have a valid ID, update of the bookmarkable URL is NOT allowed
+        assertFalse(emeraldCityPlace.isUpdateLocationBarAllowed());
+
+        assertTrue(customPanelDef.getParts().isEmpty());
+        verify(panelManager).removeWorkbenchPanel(customPanelDef);
+    }
+
+    @Test
+    public void testClosingActivityInCustomPanelInsideHTMLElementWithValidId() throws Exception {
+        HTMLElement any = any(HTMLElement.class);
+        CustomPanelDefinitionImpl customPanelDef = new CustomPanelDefinitionImpl(
+                UnanchoredStaticWorkbenchPanelPresenter.class.getName(),
+                any);
+        when(panelManager.addCustomPanel(any,
+                                         eq(UnanchoredStaticWorkbenchPanelPresenter.class.getName())))
+                .thenReturn(customPanelDef);
+
+        PlaceRequest emeraldCityPlace = new DefaultPlaceRequest("emerald_city");
+        createWorkbenchScreenActivity(emeraldCityPlace);
+
+        HTMLElement customContainer = mock(HTMLElement.class);
+        when(customContainer.getId()).thenReturn("fancyId");
+
+        placeManager.goTo(emeraldCityPlace,
+                          customContainer);
+        placeManager.closePlace(emeraldCityPlace);
+
+        // the HTML element has a valid ID, update of the bookmarkable URL is allowed
+        assertTrue(emeraldCityPlace.isUpdateLocationBarAllowed());
 
         assertTrue(customPanelDef.getParts().isEmpty());
         verify(panelManager).removeWorkbenchPanel(customPanelDef);

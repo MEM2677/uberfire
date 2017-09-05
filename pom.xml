@@ -22,7 +22,7 @@
     <groupId>org.jboss.integration-platform</groupId>
     <artifactId>jboss-integration-platform-bom</artifactId>
     <!-- Keep in sync with the parent version of uberfire-bom/pom.xml -->
-    <version>7.0.0.CR9</version>
+    <version>7.0.0.Final</version>
   </parent>
 
   <groupId>org.uberfire</groupId>
@@ -51,7 +51,7 @@
   <properties>
     <uberfire.version>${project.version}</uberfire.version>
     <!-- Exception as it is needed for gwt-maven-plugin version-->
-    <version.com.google.gwt>2.8.0</version.com.google.gwt>
+    <version.com.google.gwt>2.8.1</version.com.google.gwt>
     <version.com.allen-sauer.gwt.dnd>3.3.3</version.com.allen-sauer.gwt.dnd>
     <version.com.google.guava>20.0</version.com.google.guava>
     <version.org.apache.tomcat>7.0.61</version.org.apache.tomcat>
@@ -61,8 +61,9 @@
     <!-- JGIT 4.4.1.201607150455-r override can be removed once we use IP BOM which includes https://github.com/jboss-integration/jboss-integration-platform-bom/pull/327 -->
     <version.org.eclipse.jgit>4.8.0.201706111038-r</version.org.eclipse.jgit>
     <version.org.apache.sshd>1.6.0</version.org.apache.sshd>
-
-    <version.org.jboss.errai>4.0.2-SNAPSHOT</version.org.jboss.errai>
+    <!-- Custom Freemarker build with workaround for random concurrent access issue (annotation processors). See AF-600 for more info.-->
+    <version.org.freemarker>2.3.26.jbossorg-1</version.org.freemarker>
+    <version.org.jboss.errai>4.1.0-SNAPSHOT</version.org.jboss.errai>
     <version.org.webjars.bower.org.patternfly>3.18.1</version.org.webjars.bower.org.patternfly>
     <version.org.webjars.bower.google-code-prettify>1.0.4</version.org.webjars.bower.google-code-prettify>
     <version.org.webjars.bower.bootstrap-select>1.10.0</version.org.webjars.bower.bootstrap-select>
@@ -86,7 +87,7 @@
     <version.com.ahome-it.lienzo-tests>2.0.287-RELEASE</version.com.ahome-it.lienzo-tests>
 
     <version.org.jboss.spec.javax.enterprise.concurrent>1.0.0.Final</version.org.jboss.spec.javax.enterprise.concurrent>
-
+    <version.bundle.plugin>3.3.0</version.bundle.plugin><!-- 3.2.0 sometimes fails with NPE during parallel build-->
     <!-- Make OSGi happy -->
     <osgi.snapshot.qualifier>${maven.build.timestamp}</osgi.snapshot.qualifier>
     <!-- TODO fix all the modules to have all direct dependencies specified, then remove this property -->
@@ -648,6 +649,7 @@
 
   <modules>
     <module>uberfire-maven-utils</module>
+    <module>uberfire-project-datamodel</module>
     <module>uberfire-archetype</module>
     <module>uberfire-bom</module>
     <module>uberfire-commons</module>

@@ -50,6 +50,7 @@ public class BookmarkableUrlHelper {
     public final static String CLOSED_PREFIX = "~";
     public final static String CLOSED_DOCK_PREFIX = "!";
     public final static int MAX_NAV_URL_SIZE = 1900;
+    public final static String HTML_ID_SEP = ":";
 
     private static boolean isNotBlank(final String str) {
         return (str != null
@@ -72,7 +73,8 @@ public class BookmarkableUrlHelper {
      */
     public static String registerOpenedScreen(String bookmarkableUrl,
                                               final PlaceRequest placeRequest) {
-        final String screenName = placeRequest.getFullIdentifier();
+//        final String screenName = placeRequest.getFullIdentifier();
+        final String screenName = generateScreenName(placeRequest);
         final String closedScreen = CLOSED_PREFIX.concat(screenName);
         final String currentBookmarkableUrl = bookmarkableUrl;
 
@@ -99,6 +101,26 @@ public class BookmarkableUrlHelper {
             return currentBookmarkableUrl;
         }
         return bookmarkableUrl;
+    }
+
+    /**
+     *
+     *
+     * @param placeRequest
+     * @return
+     */
+    private static String generateScreenName(PlaceRequest placeRequest) {
+        String name = "";
+
+        if (placeRequest != null) {
+            name = name.concat(placeRequest.getFullIdentifier());
+            if(placeRequest.getHtmlId() != null
+                    && !placeRequest.getHtmlId().trim().equals("")) {
+                name = name.concat(BookmarkableUrlHelper.HTML_ID_SEP)
+                        .concat(placeRequest.getHtmlId());
+            }
+        }
+        return name;
     }
 
     private static boolean screenWasClosed(String bookmarkableUrl,

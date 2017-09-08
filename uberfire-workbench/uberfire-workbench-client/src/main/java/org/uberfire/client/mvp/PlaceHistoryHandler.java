@@ -25,6 +25,7 @@ import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.user.client.History;
 import com.google.web.bindery.event.shared.EventBus;
 import com.google.web.bindery.event.shared.HandlerRegistration;
+import org.jboss.errai.common.client.dom.HTMLElement;
 import org.uberfire.client.workbench.docks.UberfireDocksInteractionEvent;
 import org.uberfire.mvp.PlaceRequest;
 import org.uberfire.mvp.impl.DefaultPlaceRequest;
@@ -149,6 +150,30 @@ public class PlaceHistoryHandler {
     public PlaceRequest getPerspectiveFromPlace(final PlaceRequest place) {
         return BookmarkableUrlHelper.getPerspectiveFromPlace(place);
     }
+
+    /**
+     *
+     * @param place
+     * @param addTo
+     */
+    public void checkGoTo(PlaceRequest place,
+                          final HTMLElement addTo) {
+        if (null == place
+                || null == addTo) {
+            return;
+        }
+        if (null == addTo.getId()
+                || addTo.getId().trim().equals("")) {
+            // prevent URL from being updated
+            place.setUpdateLocationBar(false);
+
+            GWT.log("WARNING: goTo() method has been called with the HTMLElement parameter with no ID: ignoring! ");
+        } else {
+            // track the destination ID
+            place.setHtmlId(addTo.getId());
+        }
+    }
+
 
     /**
      * register opened screen of perspective

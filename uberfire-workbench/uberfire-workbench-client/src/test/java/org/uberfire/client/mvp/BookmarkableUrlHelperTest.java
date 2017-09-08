@@ -113,6 +113,57 @@ public class BookmarkableUrlHelperTest extends TestCase {
     }
 
     @Test
+    public void testRegisterOpenWithHtmlId() {
+        PlaceRequest req1 = new DefaultPlaceRequest("screen1");
+        PlaceRequest req2 = new DefaultPlaceRequest("screen2");
+//        PlaceRequest req3 = new DefaultPlaceRequest("screen3");
+//        PlaceRequest req4 = new DefaultPlaceRequest("screen4");
+        final String perspective = "perspective";
+        final String HTMLID1 = "htmlId1";
+        final String HTMLID2 = "htmlId2";
+
+        req1.setHtmlId(HTMLID1);
+        req2.setHtmlId(HTMLID2);
+        String url = "";
+
+        url = BookmarkableUrlHelper.registerOpenedScreen(url,
+                                                         req1);
+
+        assertEquals(req1.getFullIdentifier() + BookmarkableUrlHelper.HTML_ID_SEP + HTMLID1,
+                     url);
+        String origUrl = url;
+
+        url = BookmarkableUrlHelper.registerOpenedScreen(url,
+                                                         req2);
+        assertEquals(origUrl + BookmarkableUrlHelper.SEPARATOR +
+                             req2.getFullIdentifier() + BookmarkableUrlHelper.HTML_ID_SEP + HTMLID2,
+                     url);
+
+        // test with screen closed (we compose the URL)
+        final String closedScreen = "closedScreen";
+        final PlaceRequest closed = new DefaultPlaceRequest(closedScreen);
+        url = "perspective|"
+                .concat(BookmarkableUrlHelper.CLOSED_PREFIX)
+                .concat(closedScreen).concat(",openScreen$externalScreen");
+        url = BookmarkableUrlHelper.registerOpenedScreen(url,
+                                                         closed);
+        String expected = "perspective|"
+                .concat(closedScreen).concat(",openScreen$externalScreen");
+        assertEquals(expected,
+                     url);
+        // compose a big URL
+        StringBuilder bigUrl = new StringBuilder(perspective);
+        while (bigUrl.length() < BookmarkableUrlHelper.MAX_NAV_URL_SIZE) {
+            bigUrl.append(",screen");
+        }
+        url = BookmarkableUrlHelper.registerOpenedScreen(bigUrl.toString(),
+                                                         req1);
+        assertNotNull(url);
+        assertEquals(bigUrl.toString(),
+                     url);
+    }
+
+    @Test
     public void testRegisterClose() {
         String url = "perspective|screen1,screen2$screen3,screen4";
 
@@ -318,6 +369,48 @@ public class BookmarkableUrlHelperTest extends TestCase {
     }
 
     @Test
+    public void testGetScreensFromPlaceWithHtmlId() {
+        final String url = "perspective|~screen1,screen2:id1$!screen3:id2,screen4";
+        final String url2 = "UFWidgets|PagedTableScreen[ESimpleDockScreen,!WSimpleDockScreen,ESimpleDockScreen,]";
+        final String url3 = "PagedTableScreen[ESimpleDockScreen,!WSimpleDockScreen,ESimpleDockScreen,]";
+        final PlaceRequest place = new DefaultPlaceRequest(url);
+        final PlaceRequest place2 = new DefaultPlaceRequest(url2);
+        final PlaceRequest placeNoPerspective = new DefaultPlaceRequest(url3);
+        final PlaceRequest placeNull = null;
+
+        Set<String> set = BookmarkableUrlHelper.getScreensFromPlace(place);
+        assertNotNull(set);
+        assertFalse(set.isEmpty());
+
+        assertEquals(4,
+                     set.size());
+        assertTrue(set.contains("~screen1"));
+        assertTrue(set.contains("screen2:id1"));
+        assertTrue(set.contains("!screen3:id2"));
+        assertTrue(set.contains("screen4"));
+
+        set = BookmarkableUrlHelper.getScreensFromPlace(place2);
+        assertNotNull(set);
+
+        assertFalse(set.isEmpty());
+        assertEquals(1,
+                     set.size());
+        assertTrue(set.contains("PagedTableScreen"));
+
+        set = BookmarkableUrlHelper.getScreensFromPlace(placeNull);
+        assertNotNull(set);
+        assertTrue(set.isEmpty());
+
+        // test with bookmarkable URL with no perspective
+        set = BookmarkableUrlHelper.getScreensFromPlace(placeNoPerspective);
+        assertNotNull(set);
+        assertFalse(set.isEmpty());
+        assertEquals(1,
+                     set.size());
+        assertTrue(set.contains("PagedTableScreen"));
+    }
+
+    @Test
     public void testGetClosedScreenFromPlace() {
         final String url = "perspective|~screen1,screen2$~screen3,screen4";
         final String url2 = "UFWidgets|PagedTableScreen[ESimpleDockScreen,!WSimpleDockScreen,ESimpleDockScreen,]";
@@ -407,7 +500,7 @@ public class BookmarkableUrlHelperTest extends TestCase {
 
     @Test
     public void testIsScreenClosed() {
-        final String url = "perspective|~screen1,screen2$~screen3,screen4";
+        final String url = "perspective|~screen1,screen2$~screen3:id3,screen4";
         final String url2 = "UFWidgets|PagedTableScreen[ESimpleDockScreen,!WSimpleDockScreen,ESimpleDockScreen,]";
 
         assertTrue(BookmarkableUrlHelper.isScreenClosed(
@@ -415,7 +508,7 @@ public class BookmarkableUrlHelperTest extends TestCase {
                 "screen1"));
         assertTrue(BookmarkableUrlHelper.isScreenClosed(
                 url,
-                "screen3"));
+                "screen3:id3"));
         assertFalse(BookmarkableUrlHelper.isScreenClosed(
                 url,
                 "screen2"));

@@ -1177,6 +1177,7 @@ public class PlaceManagerTest {
         createWorkbenchScreenActivity(emeraldCityPlace);
 
         HTMLElement customContainer = mock(HTMLElement.class);
+        when(customContainer.getId()).thenReturn("");
 
         placeManager.goTo(emeraldCityPlace,
                           customContainer);

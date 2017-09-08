@@ -35,7 +35,6 @@ import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.user.client.ui.HasWidgets;
 import com.google.gwt.user.client.ui.IsWidget;
-import com.google.gwt.user.client.ui.Widget;
 import com.google.web.bindery.event.shared.EventBus;
 import com.google.web.bindery.event.shared.SimpleEventBus;
 import jsinterop.annotations.JsMethod;
@@ -229,14 +228,9 @@ public class PlaceManagerImpl
     @Override
     public void goTo(PlaceRequest place,
                      final HTMLElement addTo) {
-
-        if (null == addTo.getId()
-                || addTo.getId().trim().equals("")) {
-            // prevent URL from being updated
-            place.setUpdateLocationBar(false);
-
-            GWT.log("WARNING: goTo() method has been called with the HTMLElement parameter with no ID: ignoring! ");
-        }
+        // check whether to track the URL or not
+        placeHistoryHandler.checkGoTo(place,
+                                      addTo);
         closeOpenPlacesAt(panelsOfThisHTMLElement(addTo));
 
         goToTargetPanel(place,
@@ -449,7 +443,6 @@ public class PlaceManagerImpl
                 }
             }
         }
-
         return null;
     }
 

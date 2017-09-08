@@ -31,6 +31,7 @@ public class DefaultPlaceRequest implements PlaceRequest {
     protected final Map<String, String> parameters = new HashMap<String, String>();
     private boolean updateLocationBar;
     protected String identifier;
+    protected String htmlId;
 
     public DefaultPlaceRequest() {
         this("");
@@ -244,6 +245,16 @@ public class DefaultPlaceRequest implements PlaceRequest {
     @Override
     public void setUpdateLocationBar(boolean updateLocationBar) {
         this.updateLocationBar = updateLocationBar;
+    }
+
+    @Override
+    public String getHtmlId() {
+        return this.htmlId;
+    }
+
+    @Override
+    public void setHtmlId(String id) {
+        this.htmlId = id;
     }
 
     @Override

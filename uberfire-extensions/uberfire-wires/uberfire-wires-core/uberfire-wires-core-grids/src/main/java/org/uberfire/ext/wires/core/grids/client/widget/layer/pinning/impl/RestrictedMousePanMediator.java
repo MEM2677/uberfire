@@ -37,7 +37,7 @@ import org.uberfire.ext.wires.core.grids.client.widget.layer.pinning.TransformMe
  */
 public class RestrictedMousePanMediator extends AbstractMediator {
 
-    private final GridLayer gridLayer;
+    private GridLayer gridLayer;
 
     private TransformMediator transformMediator;
 
@@ -49,6 +49,9 @@ public class RestrictedMousePanMediator extends AbstractMediator {
 
     public RestrictedMousePanMediator(final GridLayer gridLayer) {
         this.gridLayer = gridLayer;
+    }
+
+    protected RestrictedMousePanMediator() {
     }
 
     public boolean isDragging() {
@@ -70,26 +73,31 @@ public class RestrictedMousePanMediator extends AbstractMediator {
     }
 
     protected void setCursor(final Style.Cursor cursor) {
-        final Viewport viewport = gridLayer.getViewport();
-        viewport.getElement().getStyle().setCursor(cursor);
+        getLayerViewport().getElement().getStyle().setCursor(cursor);
+    }
+
+    protected Viewport getLayerViewport() {
+        return getGridLayer().getViewport();
+    }
+
+    GridLayer getGridLayer() {
+        return gridLayer;
     }
 
     @Override
     public boolean handleEvent(final GwtEvent<?> event) {
         if (event.getAssociatedType() == NodeMouseMoveEvent.getType()) {
-            if (m_dragging) {
+            if (isDragging()) {
                 onMouseMove((NodeMouseMoveEvent) event);
             }
-            return false;
         } else if (event.getAssociatedType() == NodeMouseDownEvent.getType()) {
             final IEventFilter filter = getEventFilter();
 
             if ((null == filter) || (false == filter.isEnabled()) || (filter.test(event))) {
                 onMouseDown((NodeMouseDownEvent) event);
             }
-            return false;
         } else if (event.getAssociatedType() == NodeMouseUpEvent.getType()) {
-            if (m_dragging) {
+            if (isDragging()) {
                 onMouseUp((NodeMouseUpEvent) event);
             }
         } else if (event.getAssociatedType() == NodeMouseOutEvent.getType()) {
@@ -122,7 +130,7 @@ public class RestrictedMousePanMediator extends AbstractMediator {
         final Point2D curr = new Point2D(event.getX(),
                                          event.getY());
 
-        m_inverseTransform.transform(curr,
+        inverseTransform().transform(curr,
                                      curr);
 
         double deltaX = curr.getX() - m_last.getX();
@@ -148,5 +156,9 @@ public class RestrictedMousePanMediator extends AbstractMediator {
 
     protected void onMouseUp(final NodeMouseUpEvent event) {
         cancel();
+    }
+
+    protected Transform inverseTransform() {
+        return m_inverseTransform;
     }
 }

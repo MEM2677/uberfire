@@ -25,6 +25,7 @@ import javax.enterprise.context.Dependent;
 import javax.enterprise.event.Event;
 
 import com.google.gwt.event.shared.EventBus;
+import com.google.gwt.user.client.rpc.core.java.lang.String_CustomFieldSerializer;
 import com.google.gwt.user.client.ui.HasWidgets;
 import org.jboss.errai.common.client.dom.HTMLElement;
 import org.jboss.errai.ioc.client.QualifierUtil;
@@ -160,6 +161,7 @@ public class PlaceManagerTest {
                 .thenReturn(true);
         when(perspectiveManager.getCurrentPerspective())
                 .thenReturn(defaultPerspective);
+
 
         when(activityManager.getActivities(any(PlaceRequest.class))).thenReturn(singleton(notFoundActivity));
 
@@ -1178,6 +1180,22 @@ public class PlaceManagerTest {
 
         HTMLElement customContainer = mock(HTMLElement.class);
         when(customContainer.getId()).thenReturn("");
+        // simulate the answer of the checkGoTo method...
+        doAnswer(new Answer() {
+            public Object answer(InvocationOnMock invocation) {
+                Object[] args = invocation.getArguments();
+                HTMLElement html = (HTMLElement) args[1];
+                PlaceRequest req = (PlaceRequest) args[0];
+
+                if (html.getId() == null
+                        || html.getId().equals("")) {
+                    req.setUpdateLocationBar(false);
+                } else {
+                    req.setUpdateLocationBar(true);
+                }
+                return null;
+            }
+        }).when(placeHistoryHandler).checkGoTo(any(), any());
 
         placeManager.goTo(emeraldCityPlace,
                           customContainer);
@@ -1205,6 +1223,22 @@ public class PlaceManagerTest {
 
         HTMLElement customContainer = mock(HTMLElement.class);
         when(customContainer.getId()).thenReturn("fancyId");
+        // simulate the answer of the checkGoTo method...
+        doAnswer(new Answer() {
+            public Object answer(InvocationOnMock invocation) {
+                Object[] args = invocation.getArguments();
+                PlaceRequest req = (PlaceRequest) args[0];
+                HTMLElement html = (HTMLElement) args[1];
+
+                if (html.getId() == null
+                        || html.getId().equals("")) {
+                    req.setUpdateLocationBar(false);
+                } else {
+                    req.setUpdateLocationBar(true);
+                }
+                return null;
+            }
+        }).when(placeHistoryHandler).checkGoTo(any(), any());
 
         placeManager.goTo(emeraldCityPlace,
                           customContainer);

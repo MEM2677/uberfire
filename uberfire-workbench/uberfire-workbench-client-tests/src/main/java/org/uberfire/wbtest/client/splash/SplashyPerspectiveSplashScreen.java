@@ -16,7 +16,7 @@
 
 package org.uberfire.wbtest.client.splash;
 
-import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.contextrue.ApplicationScoped;
 import javax.inject.Inject;
 import javax.inject.Named;
 

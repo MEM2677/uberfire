@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.gwt.core.shared.GWT;
 import org.uberfire.client.workbench.docks.UberfireDock;
@@ -52,6 +53,7 @@ public class BookmarkableUrlHelper {
     public final static String CLOSED_PREFIX = "~";
     public final static String CLOSED_DOCK_PREFIX = "!";
     public final static int MAX_NAV_URL_SIZE = 1900;
+    public final static String HTML_ID_SEP = ":";
 
     private static boolean isNotBlank(final String str) {
         return (str != null
@@ -74,8 +76,8 @@ public class BookmarkableUrlHelper {
      */
     public static String registerOpenedScreen(String bookmarkableUrl,
                                               final PlaceRequest placeRequest) {
-        String screenName = placeRequest.getFullIdentifier();
-        String closedScreen = CLOSED_PREFIX.concat(screenName);
+        final String screenName = generateScreenName(placeRequest);
+        final String closedScreen = CLOSED_PREFIX.concat(screenName);
         final String currentBookmarkableUrl = bookmarkableUrl;
 
         if (screenWasClosed(bookmarkableUrl,
@@ -101,6 +103,27 @@ public class BookmarkableUrlHelper {
             return currentBookmarkableUrl;
         }
         return bookmarkableUrl;
+    }
+
+    /**
+     *
+     *
+     * @param placeRequest
+     * @return
+     */
+    private static String generateScreenName(PlaceRequest placeRequest) {
+        String name = "";
+
+        GWT.log("@@@\n@@@\n@@@\n");
+        if (placeRequest != null) {
+            name = name.concat(placeRequest.getFullIdentifier());
+            if(placeRequest.getHtmlId() != null
+                    && !placeRequest.getHtmlId().trim().equals("")) {
+                name = name.concat(BookmarkableUrlHelper.HTML_ID_SEP)
+                        .concat(placeRequest.getHtmlId());
+            }
+        }
+        return name;
     }
 
     private static boolean screenWasClosed(String bookmarkableUrl,
@@ -167,7 +190,6 @@ public class BookmarkableUrlHelper {
 
         if (isNotBlank(url)) {
             if (isPerspectiveInUrl(url)) {
-                // standard case, full bookmarkable URL
                 String perspectiveName = url.substring(0,
                                                        url.indexOf(PERSPECTIVE_SEP));
                 place = new DefaultPlaceRequest(perspectiveName);
@@ -216,7 +238,6 @@ public class BookmarkableUrlHelper {
      */
     public static String getUrlToken(final String bookmarkableUrl,
                                      final String screen) {
-
         int st = isPerspectiveInUrl(bookmarkableUrl) ?
                 (bookmarkableUrl.indexOf(PERSPECTIVE_SEP) + 1) : 0;
         String screensList = bookmarkableUrl.replace(OTHER_SCREEN_SEP,
@@ -258,10 +279,24 @@ public class BookmarkableUrlHelper {
     }
 
     /**
+     * Return all the docked screens
+     * @param place
+     * @return
+     * @note non-docked screens are not taken into consideration
+     */
+    public static Set<String> getDockedScreensFromPlace(final PlaceRequest place) {
+        if (null != place) {
+            return getDockedScreensFromUrl(place.getFullIdentifier());
+        }
+        return new HashSet<>();
+    }
+
+    /**
      * Return all the screens (opened or closed) that is, everything
      * after the perspective declaration
      * @param url
      * @return
+     * @note docked screens are not taken into consideration
      */
     public static Set<String> getScreensFromUrl(String url) {
         HashSet<String> result = new HashSet<>();
@@ -276,7 +311,7 @@ public class BookmarkableUrlHelper {
         if (isPerspectiveInUrl(url)) {
             url = url.substring(url.indexOf(PERSPECTIVE_SEP) + 1);
         }
-        // get the docks and the screens list
+
         start = url.indexOf(DOCK_BEGIN_SEP);
         end = url.indexOf(DOCK_CLOSE_SEP) + 1;
         if (start > -1) {
@@ -287,12 +322,12 @@ public class BookmarkableUrlHelper {
         }
         if (null != url
                 && !url.trim().equals("")) {
-            // replace the '$' with a comma ','
-            url = url.replace(OTHER_SCREEN_SEP,
-                              SEPARATOR);
-            String[] token = url.split(SEPARATOR);
+        // replace the '$' with a comma ','
+        url = url.replace(OTHER_SCREEN_SEP,
+                          SEPARATOR);
+        String[] token = url.split(SEPARATOR);
             result = new HashSet<>(Arrays.asList(token));
-        }
+    }
         return result;
     }
 

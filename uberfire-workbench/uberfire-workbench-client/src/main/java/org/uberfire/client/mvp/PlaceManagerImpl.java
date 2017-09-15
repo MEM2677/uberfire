@@ -31,7 +31,9 @@ import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Element;
+import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.HasWidgets;
 import com.google.gwt.user.client.ui.IsWidget;
 import com.google.web.bindery.event.shared.EventBus;
@@ -231,9 +233,24 @@ public class PlaceManagerImpl
 
     @Override
     public void goTo(PlaceRequest place,
-                     HasWidgets addTo) {
+                     final HasWidgets addTo) {
 
         closeOpenPlacesAt(panelsOfThisHasWidgets(addTo));
+/*
+        Widget array[] = new Widget[1];
+        addTo.forEach(s -> {
+            if (null == s.getElement().getId()
+                    || s.getElement().getId().trim().equals("")) {
+                array[0] = s;
+            }
+        });
+
+        if (null != array[0]) {
+            GWT.log("WARNING: goTo() method has been called with the HasWidgets object having at least one widget with ID: ignoring! ");
+
+            place.setUpdateLocationBar(false);
+        }
+*/
         goToTargetPanel(place,
                         panelManager.addCustomPanel(addTo,
                                                     UnanchoredStaticWorkbenchPanelPresenter.class.getName()));
@@ -241,8 +258,13 @@ public class PlaceManagerImpl
 
     @Override
     public void goTo(PlaceRequest place,
-                     HTMLElement addTo) {
+                     final HTMLElement addTo) {
 
+        Window.alert("AAAAA");
+
+        // check whether to track the URL or not
+        placeHistoryHandler.checkGoTo(place,
+                                      addTo);
         closeOpenPlacesAt(panelsOfThisHTMLElement(addTo));
         goToTargetPanel(place,
                         panelManager.addCustomPanel(addTo,
@@ -582,7 +604,6 @@ public class PlaceManagerImpl
                 }
             }
         }
-
         return null;
     }
 

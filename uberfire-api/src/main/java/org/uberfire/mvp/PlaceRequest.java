@@ -74,4 +74,17 @@ public interface PlaceRequest {
     default String asString() {
         return this.toString();
     }
+
+    /**
+     * Return the HTML ID associated with the call, if any
+     *
+     * @return
+     */
+    String getHtmlId();
+
+    /**
+     * Set the HTML ID associated with the call, if any
+     * @param id
+     */
+    void setHtmlId(final String id);
 }

@@ -25,6 +25,7 @@ import javax.enterprise.context.Dependent;
 import javax.enterprise.event.Event;
 
 import com.google.gwt.event.shared.EventBus;
+import com.google.gwt.user.client.rpc.core.java.lang.String_CustomFieldSerializer;
 import com.google.gwt.user.client.ui.HasWidgets;
 import org.jboss.errai.common.client.dom.HTMLElement;
 import org.jboss.errai.ioc.client.QualifierUtil;
@@ -160,6 +161,7 @@ public class PlaceManagerTest {
         when(perspectiveManager.getCurrentPerspective())
                 .thenReturn(defaultPerspective);
 
+
         when(activityManager.getActivities(any(PlaceRequest.class))).thenReturn(singleton(notFoundActivity));
 
         // for now (and this will have to change for UF-61), PathPlaceRequest performs an IOC lookup for ObservablePath in its constructor
@@ -259,8 +261,8 @@ public class PlaceManagerTest {
         placeManager.initPlaceHistoryHandler();
 
         verify(placeHistoryHandler).initialize(any(PlaceManager.class),
-                                             any(EventBus.class),
-                                             any(PlaceRequest.class));
+                                               any(EventBus.class),
+                                               any(PlaceRequest.class));
     }
 
     @Test
@@ -930,7 +932,7 @@ public class PlaceManagerTest {
         when(emeraldCityActivity2.isType(ActivityResourceType.SCREEN.name())).thenReturn(true);
 
         placeManagerSpy.goTo(emeraldCityPlace,
-                               panel);
+                             panel);
 
         verifyActivityLaunchSideEffects(emeraldCityPlace,
                                         emeraldCityActivity,
@@ -952,7 +954,7 @@ public class PlaceManagerTest {
         when(customPanelDef.getParts()).thenReturn(parts);
 
         placeManagerSpy.goTo(emeraldCityPlace2,
-                               panel);
+                             panel);
 
         verifyActivityLaunchSideEffects(emeraldCityPlace2,
                                         emeraldCityActivity2,
@@ -1173,10 +1175,73 @@ public class PlaceManagerTest {
         createWorkbenchScreenActivity(emeraldCityPlace);
 
         HTMLElement customContainer = mock(HTMLElement.class);
+        when(customContainer.getId()).thenReturn("");
+        // simulate the answer of the checkGoTo method...
+        doAnswer(new Answer() {
+            public Object answer(InvocationOnMock invocation) {
+                Object[] args = invocation.getArguments();
+                HTMLElement html = (HTMLElement) args[1];
+                PlaceRequest req = (PlaceRequest) args[0];
+
+                if (html.getId() == null
+                        || html.getId().equals("")) {
+                    req.setUpdateLocationBar(false);
+                } else {
+                    req.setUpdateLocationBar(true);
+                }
+                return null;
+            }
+        }).when(placeHistoryHandler).checkGoTo(any(), any());
 
         placeManager.goTo(emeraldCityPlace,
                           customContainer);
         placeManager.closePlace(emeraldCityPlace);
+
+        // the HTML element DOES NOT have a valid ID, update of the bookmarkable URL is NOT allowed
+        assertFalse(emeraldCityPlace.isUpdateLocationBarAllowed());
+
+        assertTrue(customPanelDef.getParts().isEmpty());
+        verify(panelManager).removeWorkbenchPanel(customPanelDef);
+    }
+
+    @Test
+    public void testClosingActivityInCustomPanelInsideHTMLElementWithValidId() throws Exception {
+        HTMLElement any = any(HTMLElement.class);
+        CustomPanelDefinitionImpl customPanelDef = new CustomPanelDefinitionImpl(
+                UnanchoredStaticWorkbenchPanelPresenter.class.getName(),
+                any);
+        when(panelManager.addCustomPanel(any,
+                                         eq(UnanchoredStaticWorkbenchPanelPresenter.class.getName())))
+                .thenReturn(customPanelDef);
+
+        PlaceRequest emeraldCityPlace = new DefaultPlaceRequest("emerald_city");
+        createWorkbenchScreenActivity(emeraldCityPlace);
+
+        HTMLElement customContainer = mock(HTMLElement.class);
+        when(customContainer.getId()).thenReturn("fancyId");
+        // simulate the answer of the checkGoTo method...
+        doAnswer(new Answer() {
+            public Object answer(InvocationOnMock invocation) {
+                Object[] args = invocation.getArguments();
+                PlaceRequest req = (PlaceRequest) args[0];
+                HTMLElement html = (HTMLElement) args[1];
+
+                if (html.getId() == null
+                        || html.getId().equals("")) {
+                    req.setUpdateLocationBar(false);
+                } else {
+                    req.setUpdateLocationBar(true);
+                }
+                return null;
+            }
+        }).when(placeHistoryHandler).checkGoTo(any(), any());
+
+        placeManager.goTo(emeraldCityPlace,
+                          customContainer);
+        placeManager.closePlace(emeraldCityPlace);
+
+        // the HTML element has a valid ID, update of the bookmarkable URL is allowed
+        assertTrue(emeraldCityPlace.isUpdateLocationBarAllowed());
 
         assertTrue(customPanelDef.getParts().isEmpty());
         verify(panelManager).removeWorkbenchPanel(customPanelDef);

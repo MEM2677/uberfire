@@ -18,12 +18,16 @@ package org.uberfire.client.mvp;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
-import com.google.gwt.core.shared.GWT;
+import com.google.gwt.core.client.GWT;
+import org.jboss.errai.common.client.dom.Div;
+import org.jboss.errai.common.client.dom.Document;
+import org.jboss.errai.common.client.dom.Window;
 import org.uberfire.client.workbench.docks.UberfireDock;
 import org.uberfire.mvp.PlaceRequest;
 import org.uberfire.mvp.impl.DefaultPlaceRequest;
@@ -80,6 +84,7 @@ public class BookmarkableUrlHelper {
         final String closedScreen = CLOSED_PREFIX.concat(screenName);
         final String currentBookmarkableUrl = bookmarkableUrl;
 
+
         if (screenWasClosed(bookmarkableUrl,
                             closedScreen)) {
             bookmarkableUrl = bookmarkableUrl.replace(closedScreen,
@@ -94,6 +99,7 @@ public class BookmarkableUrlHelper {
         } else {
             // this is a screen outside the current perspective
             if (!urlContainsExtraPerspectiveScreen(bookmarkableUrl)) {
+                GWT.log("~~~ " + bookmarkableUrl);
                 bookmarkableUrl = bookmarkableUrl.concat(OTHER_SCREEN_SEP).concat(screenName);
             } else {
                 bookmarkableUrl = bookmarkableUrl.concat(SEPARATOR).concat(screenName);
@@ -102,22 +108,20 @@ public class BookmarkableUrlHelper {
         if (isBiggerThenMaxURLSize(bookmarkableUrl)) {
             return currentBookmarkableUrl;
         }
+        GWT.log("@@@ " + bookmarkableUrl);
         return bookmarkableUrl;
     }
 
     /**
-     *
-     *
      * @param placeRequest
      * @return
      */
     private static String generateScreenName(PlaceRequest placeRequest) {
         String name = "";
 
-        GWT.log("@@@\n@@@\n@@@\n");
         if (placeRequest != null) {
             name = name.concat(placeRequest.getFullIdentifier());
-            if(placeRequest.getHtmlId() != null
+            if (placeRequest.getHtmlId() != null
                     && !placeRequest.getHtmlId().trim().equals("")) {
                 name = name.concat(BookmarkableUrlHelper.HTML_ID_SEP)
                         .concat(placeRequest.getHtmlId());
@@ -193,7 +197,7 @@ public class BookmarkableUrlHelper {
                 String perspectiveName = url.substring(0,
                                                        url.indexOf(PERSPECTIVE_SEP));
                 place = new DefaultPlaceRequest(perspectiveName);
-            } else if (isValidScreen(url)) {
+            } else if (isValidScreenReference(url)) {
                 // just in case there is ONLY one screen id in the URL
                 place = new DefaultPlaceRequest(url);
             }
@@ -322,12 +326,13 @@ public class BookmarkableUrlHelper {
         }
         if (null != url
                 && !url.trim().equals("")) {
-        // replace the '$' with a comma ','
-        url = url.replace(OTHER_SCREEN_SEP,
-                          SEPARATOR);
-        String[] token = url.split(SEPARATOR);
-            result = new HashSet<>(Arrays.asList(token));
-    }
+            // replace the '$' with a comma ','
+            url = url.replace(OTHER_SCREEN_SEP,
+                              SEPARATOR);
+            String[] tok = url.split(SEPARATOR);
+            List<String> token = Arrays.asList(tok);
+            result = new LinkedHashSet<>(token);
+        }
         return result;
     }
 
@@ -538,7 +543,7 @@ public class BookmarkableUrlHelper {
 
         String[] paths = bookmarkableUrl.split(PathPlaceRequest.PATH_URI_MARKER);
         for (String path : paths) {
-            if (path.contains("=")) {
+            if (path.contains(PathPlaceRequest.FILE_NAME_MARKER)) {
                 // note: splitting by 'path_uri' requires  truncate to the last comma
                 preparePathPlaceRequestInvocation(
                         extractUntilLastDelimiter(path),
@@ -554,18 +559,104 @@ public class BookmarkableUrlHelper {
      * @param screen
      * @return
      */
-    public static boolean isValidScreen(final String screen) {
+    public static boolean isValidScreenReference(final String screen) {
         return (null != screen
                 && !screen.trim().equals("")
                 && !screen.contains(PathPlaceRequest.PATH_URI_MARKER)
                 && !screen.contains(PathPlaceRequest.FILE_NAME_MARKER)
-                && !screen.contains("=")
-                && !screen.contains(BookmarkableUrlHelper.SEPARATOR)
+                && !screen.contains(SEPARATOR)
                 && !screen.contains("&")
-                && !screen.contains(BookmarkableUrlHelper.DOCK_BEGIN_SEP)
-                && !screen.contains(BookmarkableUrlHelper.DOCK_CLOSE_SEP)
-                && !screen.contains(BookmarkableUrlHelper.OTHER_SCREEN_SEP)
-                && !screen.contains(BookmarkableUrlHelper.PERSPECTIVE_SEP)
+                && !screen.contains(DOCK_BEGIN_SEP)
+                && !screen.contains(DOCK_CLOSE_SEP)
+                && !screen.contains(OTHER_SCREEN_SEP)
+                && !screen.contains(PERSPECTIVE_SEP)
         );
+    }
+
+    /**
+     * @param screen
+     * @return
+     */
+    public static boolean isValidScreenName(final String screen) {
+        return (isValidScreenReference(screen)
+                && !screen.contains("=")
+                && !screen.contains(HTML_ID_SEP)
+        );
+    }
+
+    /**
+     * Check if the given screen is a redirect to a given HTML element in the
+     * page
+     * @param screenName
+     * @return
+     */
+    public static boolean isHtmlElementRedirectScreenName(final String screenName) {
+        return (screenName != null
+                && !screenName.trim().equals("")
+                && screenName.contains(HTML_ID_SEP)
+        );
+    }
+
+    /**
+     * Get the screen name, separating it from the HTML element id and
+     * arguments
+     * @param screenName
+     * @return
+     */
+    public static String getHtmlElementScreenName(String screenName) {
+        if (isHtmlElementRedirectScreenName(screenName)) {
+            String[] tok = screenName.split(HTML_ID_SEP);
+
+            screenName = tok[0];
+        }
+        if (screenName.contains("?")) {
+            screenName = screenName.substring(0,
+                                              screenName.indexOf("?"));
+        }
+        return screenName;
+    }
+
+    /**
+     * @param screenName
+     * @return
+     */
+    public static PlaceRequest getPlaceRequestFromScreenName(final String screenName) {
+        PlaceRequest place = new DefaultPlaceRequest();
+
+        if (null != screenName
+                && !screenName.trim().equals("")) {
+            String screenId = getHtmlElementScreenName(screenName);
+            String arguments = screenName.substring(screenName.indexOf("?") + 1);
+
+            if (screenName.contains(HTML_ID_SEP)) {
+                arguments = arguments.substring(0, arguments.indexOf(HTML_ID_SEP));
+            }
+            String[] toks = arguments.split("&");
+
+            place.setIdentifier(screenId);
+            Arrays.asList(toks).forEach(a -> {
+                String[] arg = a.split("=");
+
+                place.addParameter(arg[0],
+                                   arg[1]);
+            });
+        }
+        return place;
+    }
+
+    /**
+     * @param id
+     * @return
+     */
+    public static org.jboss.errai.common.client.dom.HTMLElement getHtmlElementReferenced(String id) {
+        if (id.contains(HTML_ID_SEP)) {
+            String[] tok = id.split(HTML_ID_SEP);
+
+            id = tok[1];
+        }
+        Document document = Window.getDocument();
+        Div resolvedDiv = (Div) document.getElementById(id);
+
+        return resolvedDiv;
     }
 }

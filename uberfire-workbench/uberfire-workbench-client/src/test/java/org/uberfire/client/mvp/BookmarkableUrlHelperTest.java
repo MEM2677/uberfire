@@ -16,7 +16,6 @@
 package org.uberfire.client.mvp;
 
 import java.lang.annotation.Annotation;
-import java.net.URLDecoder;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
@@ -24,7 +23,6 @@ import java.util.Set;
 
 import javax.enterprise.context.Dependent;
 
-import com.google.gwt.http.client.URL;
 import com.google.gwtmockito.GwtMockitoTestRunner;
 import junit.framework.TestCase;
 import org.jboss.errai.ioc.client.QualifierUtil;
@@ -369,10 +367,47 @@ public class BookmarkableUrlHelperTest extends TestCase {
     }
 
     @Test
-    public void testGetScreensFromPlaceWithHtmlId() {
+    public void testGetScreensFromUrl() {
+        final String url = "referencesCentralPerspective|PreferencesCentralNavBarScreen:preferences-navbar,PreferencesCentralActionsScreen:preferences-actions,PreferencesRootScreen$org.uberfire.ext.preferences.client.central.form.DefaultPreferenceForm?id=a3825ad1-9d27-409e-81b4-306edc2fbee";
+
+        Set<String> set = BookmarkableUrlHelper.getScreensFromUrl(url);
+        set.stream().forEach(e -> {
+            System.out.println(">>> " + e + " (valid: " + BookmarkableUrlHelper.isValidScreenReference(e) + ")");
+        });
+    }
+
+    @Test
+    public void testGetPlaceRequestFromScreenName() {
+        PlaceRequest place = new DefaultPlaceRequest("myscreen");
+        place.addParameter("first",
+                           "param");
+        place.addParameter("second",
+                           "value");
+        String url = place.getFullIdentifier();
+
+        PlaceRequest request = BookmarkableUrlHelper.getPlaceRequestFromScreenName(url);
+        assertNotNull(request);
+        assertTrue(request.getParameters().get("first").equals("param")
+                           && request.getParameters().get("second").equals("value"));
+        assertEquals("myscreen", request.getIdentifier());
+
+        //url = "org.uberfire.ext.preferences.client.central.form.DefaultPreferenceForm?id=b48656ed-dfc7-4ec5-9573-3c98586a833b&title=My Preference:preferences-editor";
+        url = "form";
+        request = BookmarkableUrlHelper.getPlaceRequestFromScreenName(url);
+        assertNotNull(request);
+        assertEquals(2, request.getParameterNames().size());
+        assertEquals("org.uberfire.ext.preferences.client.central.form.DefaultPreferenceForm", request.getIdentifier());
+        assertTrue(request.getParameters().get("id").equals("b48656ed-dfc7-4ec5-9573-3c98586a833b")
+                           && request.getParameters().get("title").equals("My Preference"));
+    }
+
+
+    @Test
+    public void testGetScreensFromUrlWithHtmlId() {
         final String url = "perspective|~screen1,screen2:id1$!screen3:id2,screen4";
         final String url2 = "UFWidgets|PagedTableScreen[ESimpleDockScreen,!WSimpleDockScreen,ESimpleDockScreen,]";
         final String url3 = "PagedTableScreen[ESimpleDockScreen,!WSimpleDockScreen,ESimpleDockScreen,]";
+//        final String url4 = "http://127.0.0.1:8888/wires.html#PreferencesCentralPerspective|PreferencesCentralNavBarScreen:preferences-navbar,PreferencesCentralActionsScreen:preferences-actions,PreferencesRootScreen$org.uberfire.ext.preferences.client.central.form.DefaultPreferenceForm?id=b48656ed-dfc7-4ec5-9573-3c98586a833b&title=My Preference:preferences-editor";
 
         Set<String> set = BookmarkableUrlHelper.getScreensFromUrl(url);
         assertNotNull(set);
@@ -737,6 +772,21 @@ public class BookmarkableUrlHelperTest extends TestCase {
         assertNotNull(p5);
         assertEquals("anotherPerspective",
                      p5.getFullIdentifier());
+    }
+
+    @Test
+    public void testGetOpenedEditorsFromUrl() {
+        final String url = "PlugInAuthoringPerspective|myScreenWithParam?first=param[!WPlugins Explorer,]$Screen PlugIn Editor?path_uri=default://master@plugins/CCCC/screen.plugin&file_name=screen.plugin&has_version_support=false&name==CCCC,Perspective Editor?path_uri=default://master@plugins/AAA/perspective_layout.plugin&file_name=perspective_layout.plugin&has_version_support=false&name==AAA,Editor PlugIn Editor?path_uri=default://master@plugins/BBBB/editor.plugin&file_name=editor.plugin&has_version_support=false&name==BBBB";
+
+        Map<String, Map<String, String>> res = BookmarkableUrlHelper.getOpenedEditorsFromUrl(url);
+
+        assertNotNull(res);
+        assertFalse(res.isEmpty());
+        assertEquals(3,
+                     res.size());
+        assertTrue(res.containsKey("default://master@plugins/CCCC/screen.plugin"));
+        assertTrue(res.containsKey("default://master@plugins/BBBB/editor.plugin"));
+        assertTrue(res.containsKey("default://master@plugins/AAA/perspective_layout.plugin"));
     }
 
     /**

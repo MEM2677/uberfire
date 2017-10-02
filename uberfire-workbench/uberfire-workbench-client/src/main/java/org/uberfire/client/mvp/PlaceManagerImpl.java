@@ -260,8 +260,6 @@ public class PlaceManagerImpl
     public void goTo(PlaceRequest place,
                      final HTMLElement addTo) {
 
-        Window.alert("AAAAA");
-
         // check whether to track the URL or not
         placeHistoryHandler.checkGoTo(place,
                                       addTo);
@@ -369,10 +367,12 @@ public class PlaceManagerImpl
         goTo(perspective);
         final String perspectiveGeneratedUrl =
                 this.getPlaceHistoryHandler().getCurrentBookmarkableURLStatus();
+        GWT.log("resoring URL: " + url);
         // restore non docked screens
         BookmarkableUrlHelper.getScreensFromUrl(url)
                 .stream()
-                .filter(s -> BookmarkableUrlHelper.isValidScreen(s))
+                .peek(s -> GWT.log("processing: " + s))
+                .filter(s -> BookmarkableUrlHelper.isValidScreenReference(s))
                 .forEach(s ->
                                  toggleScreen(s,
                                               perspectiveGeneratedUrl)
@@ -380,7 +380,7 @@ public class PlaceManagerImpl
         // restore docked screens
         BookmarkableUrlHelper.getDockedScreensFromUrl(url)
                 .stream()
-                .filter(s -> BookmarkableUrlHelper.isValidScreen(s))
+                .filter(s -> BookmarkableUrlHelper.isValidScreenReference(s))
                 .forEach(s ->
                                  toggleDock(s,
                                             perspectiveGeneratedUrl)
@@ -416,26 +416,44 @@ public class PlaceManagerImpl
 
     /**
      * Open or close a non docked screen
-     * @param screendName
+     *
+     * @param screenName
      * @param currentUrl
      */
-    private void toggleScreen(final String screendName,
+    private void toggleScreen(final String screenName,
                               final String currentUrl) {
-        if (screendName == null) {
+        if (screenName == null) {
             return;
         }
+
         // check whether the screen was already opened upon perspective launch
-        if (currentUrl.contains(screendName)) {
+        if (currentUrl.contains(screenName)) {
+            GWT.log("skipping: " + screenName);
             return;
         }
-        if (!screendName.startsWith(BookmarkableUrlHelper.CLOSED_PREFIX)) {
-//            GWT.log("restoring screen: " + screendName);
+
+        if (!screenName.startsWith(BookmarkableUrlHelper.CLOSED_PREFIX)) {
+            String screenId = BookmarkableUrlHelper.getHtmlElementScreenName(screenName);
+            PlaceRequest request = BookmarkableUrlHelper.getPlaceRequestFromScreenName(screenName);
+
             // open screen
-            goTo(screendName);
+            if (BookmarkableUrlHelper.isHtmlElementRedirectScreenName(screenName)) {
+                HTMLElement element = BookmarkableUrlHelper.getHtmlElementReferenced(screenName);
+
+                GWT.log("restoring HTML screen: " + request.getIdentifier() + " with " + request.getParameterNames().size() + "args");
+                GWT.log("restoring HTML element: " + element.getClass().getCanonicalName());
+                if (null != element) {
+                    this.goTo(request,
+                          element);
+                }
+            } else {
+                GWT.log("opening standard screen " + screenId);
+                goTo(request);
+            }
         } else {
             // close screen
-            final String id = screendName.substring(1);
-//            GWT.log("closing screen: " + screendName);
+            final String id = screenName.substring(1);
+            GWT.log("closing screen: " + id);
             closePlace(id);
         }
     }

@@ -88,8 +88,12 @@ public class PlaceHistoryHandler {
                     currentBookmarkableURLStatus.substring(0,
                                                            currentBookmarkableURLStatus.length() - 1);
         }
+        GWT.log("### " + currentBookmarkableURLStatus);
+
         historian.newItem(currentBookmarkableURLStatus,
                           false);
+
+        GWT.log("??? " +historian.getToken());
     }
 
     Logger log() {
@@ -166,12 +170,14 @@ public class PlaceHistoryHandler {
     }
 
     /**
-     * register opened screen of perspective
+     * Register opened screen of perspective
+     *
      * @param activity
      * @param place
      */
     public void registerOpen(Activity activity,
                              PlaceRequest place) {
+        GWT.log("tracking " + place.getFullIdentifier() + " [" + activity.getResourceType().getName() + " , " + place.isUpdateLocationBarAllowed() +"]");
         if (place.isUpdateLocationBarAllowed()) {
             if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
                 currentBookmarkableURLStatus = BookmarkableUrlHelper.registerOpenedPerspective(currentBookmarkableURLStatus,
@@ -184,8 +190,6 @@ public class PlaceHistoryHandler {
                 currentBookmarkableURLStatus =
                         BookmarkableUrlHelper.registerOpenedScreen(currentBookmarkableURLStatus,
                                                                    place);
-            }
-            if (place instanceof PathPlaceRequest) {
                 currentBookmarkableURLStatus =
                         BookmarkableUrlHelper.registerOpenedEditor(currentBookmarkableURLStatus,
                                                                    (PathPlaceRequest) place);

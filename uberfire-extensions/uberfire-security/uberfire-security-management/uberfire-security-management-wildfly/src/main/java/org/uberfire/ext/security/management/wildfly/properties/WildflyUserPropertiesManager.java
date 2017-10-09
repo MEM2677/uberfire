@@ -18,10 +18,7 @@ package org.uberfire.ext.security.management.wildfly.properties;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
@@ -30,12 +27,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.regex.Matcher;
 
+import org.jboss.as.domain.management.security.PropertiesFileLoader;
 import org.jboss.as.domain.management.security.UserPropertiesFileLoader;
 import org.jboss.errai.security.shared.api.Group;
 import org.jboss.errai.security.shared.api.Role;
 import org.jboss.errai.security.shared.api.identity.User;
+import org.jboss.msc.service.StartException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uberfire.commons.config.ConfigProperties;
@@ -45,6 +43,7 @@ import org.uberfire.ext.security.management.api.ContextualManager;
 import org.uberfire.ext.security.management.api.UserManager;
 import org.uberfire.ext.security.management.api.UserManagerSettings;
 import org.uberfire.ext.security.management.api.UserSystemManager;
+import org.uberfire.ext.security.management.api.exception.InvalidEntityIdentifierException;
 import org.uberfire.ext.security.management.api.exception.SecurityManagementException;
 import org.uberfire.ext.security.management.api.exception.UserNotFoundException;
 import org.uberfire.ext.security.management.impl.UserManagerSettingsImpl;
@@ -63,12 +62,13 @@ public class WildflyUserPropertiesManager extends BaseWildflyPropertiesManager i
 
     public static final String DEFAULT_USERS_FILE = "./standalone/configuration/application-users.properties";
     public static final String DEFAULT_PASSWORD = "";
+    public static final String VALID_USERNAME_SYMBOLS = "\",\", \"-\", \".\", \"/\", \"=\", \"@\", \"\\\"";
     private static final Logger LOG = LoggerFactory.getLogger(WildflyUserPropertiesManager.class);
 
     protected final IdentifierRuntimeSearchEngine<User> usersSearchEngine = new UsersIdentifierRuntimeSearchEngine();
     protected UserSystemManager userSystemManager;
     protected String usersFilePath;
-    UserPropertiesFileLoader usersFileLoader;
+    WildflyUsersPropertiesFileLoader usersFileLoader;
 
     public WildflyUserPropertiesManager() {
         this(new ConfigProperties(System.getProperties()));
@@ -102,7 +102,7 @@ public class WildflyUserPropertiesManager extends BaseWildflyPropertiesManager i
 
     @Override
     public void destroy() throws Exception {
-        getUsersFileLoader().stop(null);
+        getUsersFileLoader().stop();
     }
 
     @Override
@@ -114,6 +114,7 @@ public class WildflyUserPropertiesManager extends BaseWildflyPropertiesManager i
 
     @Override
     public User get(String identifier) throws SecurityManagementException {
+        validateUserIdentifier(identifier);
         List<String> userNames = getUserNames();
         if (userNames != null && userNames.contains(identifier)) {
             Set<Group> userGroups = null;
@@ -140,8 +141,20 @@ public class WildflyUserPropertiesManager extends BaseWildflyPropertiesManager i
     public User create(User entity) throws SecurityManagementException {
         checkNotNull("entity",
                      entity);
-        updateUserProperty(entity.getIdentifier(),
-                           "Error creating user." + entity.getIdentifier());
+        final String username = entity.getIdentifier();
+        try {
+            if (null == username || 0 == username.trim().length()) {
+                throw new IllegalArgumentException("No username specified.");
+            }
+            validateUserIdentifier(username);
+            usersFileLoader.getProperties().put(username,
+                                                DEFAULT_PASSWORD);
+            usersFileLoader.persistProperties();
+        } catch (IOException e) {
+            LOG.error("Error creating user " + username,
+                      e);
+            throw new SecurityManagementException(e);
+        }
         return entity;
     }
 
@@ -149,8 +162,8 @@ public class WildflyUserPropertiesManager extends BaseWildflyPropertiesManager i
     public User update(User entity) throws SecurityManagementException {
         checkNotNull("entity",
                      entity);
-        updateUserProperty(entity.getIdentifier(),
-                           "Error updating user " + entity.getIdentifier());
+        // Properties realm do not need to be updated, as values are just the passwords,
+        // no other attributes present.
         return entity;
     }
 
@@ -164,15 +177,13 @@ public class WildflyUserPropertiesManager extends BaseWildflyPropertiesManager i
                 throw new UserNotFoundException(username);
             }
             try {
-
                 // Remove the entry on the users properties file.
                 usersFileLoader.getProperties().remove(username);
                 usersFileLoader.persistProperties();
-
                 // Remove the entry on the groups properties file.
                 getGroupsPropertiesManager().removeEntry(username);
             } catch (IOException e) {
-                LOG.error("Error removing user " + username,
+                LOG.error("Error deleting user " + username,
                           e);
                 throw new SecurityManagementException(e);
             }
@@ -208,12 +219,21 @@ public class WildflyUserPropertiesManager extends BaseWildflyPropertiesManager i
                                String newPassword) throws SecurityManagementException {
         checkNotNull("username",
                      username);
-        if (newPassword != null) {
-            updateUserProperty(username,
-                               generateHashPassword(username,
-                                                    realm,
-                                                    newPassword),
-                               "Error changing user's password.");
+        checkNotNull("username",
+                     username);
+        if (0 == username.trim().length()) {
+            throw new IllegalArgumentException("No username specified for updating password.");
+        }
+        try {
+            usersFileLoader.getProperties().put(username,
+                                                generateHashPassword(username,
+                                                                     realm,
+                                                                     newPassword));
+            usersFileLoader.persistProperties();
+        } catch (IOException e) {
+            LOG.error("Error changing user's password",
+                      e);
+            throw new SecurityManagementException(e);
         }
     }
 
@@ -246,46 +266,14 @@ public class WildflyUserPropertiesManager extends BaseWildflyPropertiesManager i
         return CapabilityStatus.UNSUPPORTED;
     }
 
-    protected UserPropertiesFileLoader buildFileLoader(String usersFilePath) throws Exception {
+    protected WildflyUsersPropertiesFileLoader buildFileLoader(String usersFilePath) throws Exception {
         File usersFile = new File(usersFilePath);
         if (!usersFile.exists()) {
             throw new RuntimeException("Properties file for users not found at '" + usersFilePath + "'.");
         }
-
-        this.usersFileLoader = new UserPropertiesFileLoader(usersFile.getAbsolutePath(),
-                                                            null) {
-
-            // TODO Remove this when fixed in WF. Bug: Deleted properties are still persisted to properties file 
-            // as the line still present in the original property file is copied during persistProperties.
-            @Override
-            public synchronized void persistProperties() throws IOException {
-                beginPersistence();
-
-                List<String> content = readFile(propertiesFile);
-                BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(propertiesFile),
-                                                                              StandardCharsets.UTF_8));
-                try {
-                    for (String line : content) {
-                        String trimmed = line.trim();
-                        if (trimmed.length() == 0) {
-                            bw.newLine();
-                        } else {
-                            Matcher matcher = PROPERTY_PATTERN.matcher(trimmed);
-                            if (!matcher.matches()) {
-                                write(bw,
-                                      line,
-                                      true);
-                            }
-                        }
-                    }
-                    endPersistence(bw);
-                } finally {
-                    safeClose(bw);
-                }
-            }
-        };
+        this.usersFileLoader = new WildflyUsersPropertiesFileLoader(usersFile.getAbsolutePath());
         try {
-            this.usersFileLoader.start(null);
+            this.usersFileLoader.start();
         } catch (Exception e) {
             throw new IOException("Failed to start UserPropertiesFileLoader.",
                                   e);
@@ -326,33 +314,8 @@ public class WildflyUserPropertiesManager extends BaseWildflyPropertiesManager i
         return new ArrayList<String>(0);
     }
 
-    protected void updateUserProperty(final String username,
-                                      final String errorMessage) {
-        updateUserProperty(username,
-                           null,
-                           errorMessage);
-    }
-
-    protected void updateUserProperty(final String username,
-                                      final String password,
-                                      final String errorMessage) {
-        if (username != null) {
-            try {
-                String p = password != null ? password : usersFileLoader.getProperties().getProperty(username);
-                p = p != null ? p : DEFAULT_PASSWORD;
-                usersFileLoader.getProperties().put(username,
-                                                    p);
-                usersFileLoader.persistProperties();
-            } catch (IOException e) {
-                LOG.error(errorMessage,
-                          e);
-                throw new SecurityManagementException(e);
-            }
-        }
-    }
-
     // Does not need to synchronize as the manager implements ContextualManager.
-    protected UserPropertiesFileLoader getUsersFileLoader() throws Exception {
+    protected WildflyUsersPropertiesFileLoader getUsersFileLoader() throws Exception {
         if (usersFileLoader == null) {
             this.usersFileLoader = buildFileLoader(getUsersFilePath());
         }
@@ -364,6 +327,75 @@ public class WildflyUserPropertiesManager extends BaseWildflyPropertiesManager i
             return (WildflyGroupPropertiesManager) userSystemManager.groups();
         } catch (ClassCastException e) {
             return null;
+        }
+    }
+
+    /**
+     * An extension of the default Wildfly's users properties file loader,
+     * but this one supports deleting users and using empty passwords.
+     */
+    public static final class WildflyUsersPropertiesFileLoader
+            extends UserPropertiesFileLoader {
+
+        private final PropertiesLineWriterPredicate lineWriterPredicate;
+
+        public WildflyUsersPropertiesFileLoader(final String path) {
+            this(path, null);
+        }
+
+        public WildflyUsersPropertiesFileLoader(final String path,
+                                                final String relativeTo) {
+            super(path, relativeTo);
+            this.lineWriterPredicate = new PropertiesLineWriterPredicate(WildflyUsersPropertiesFileLoader.this::cleanKey,
+                                                                         true);
+        }
+
+        public void start() throws StartException {
+            super.start(null);
+        }
+
+        public void stop() {
+            super.stop(null);
+        }
+
+        @Override
+        protected void beginPersistence() throws IOException {
+            lineWriterPredicate.begin(getProperties());
+            super.beginPersistence();
+        }
+
+        @Override
+        protected void endPersistence(final BufferedWriter writer) throws IOException {
+            super.endPersistence(writer);
+            lineWriterPredicate.end();
+        }
+
+        @Override
+        protected void write(final BufferedWriter writer,
+                             final String line,
+                             final boolean newLine) throws IOException {
+            if (lineWriterPredicate.test(line)) {
+                super.write(writer, line, newLine);
+            }
+        }
+    }
+
+    /**
+     * Validates the candidate user identifier by following same Wildfly's patterns for usernames in properties realms,
+     * and by following the behavior for the <code>add-user.sh</code> script as well,
+     * here is the actual username validation constraints:
+     * <code>
+     * WFLYDM0028: Username must be alphanumeric with the exception of
+     * the following accepted symbols (",", "-", ".", "/", "=", "@", "\")
+     * </code>
+     * @param identifier The identifier to validate.
+     */
+    private void validateUserIdentifier(String identifier) {
+        if (!PropertiesFileLoader.PROPERTY_PATTERN
+                .matcher(identifier + "=0")
+                .matches()) {
+            throw new InvalidEntityIdentifierException(identifier,
+                                                       VALID_USERNAME_SYMBOLS);
         }
     }
 }

@@ -30,7 +30,7 @@ import org.uberfire.ext.editor.commons.client.validation.Validator;
 import org.uberfire.ext.editor.commons.client.validation.ValidatorCallback;
 import org.uberfire.ext.editor.commons.client.validation.ValidatorWithReasonCallback;
 
-import static org.uberfire.commons.validation.PortablePreconditions.checkNotNull;
+import static org.kie.soup.commons.validation.PortablePreconditions.checkNotNull;
 
 @Dependent
 public class RenamePopUpPresenter {
@@ -116,6 +116,8 @@ public class RenamePopUpPresenter {
             public void onFailure(final String reason) {
                 if (ValidationErrorReason.DUPLICATED_NAME.name().equals(reason)) {
                     view.handleDuplicatedFileName();
+                } else if (ValidationErrorReason.NOT_ALLOWED.name().equals(reason)) {
+                    view.handleRenameNotAllowed();
                 } else {
                     view.handleInvalidFileName();
                 }
@@ -179,5 +181,7 @@ public class RenamePopUpPresenter {
         void handleInvalidFileName();
 
         void setOriginalFileName(String fileName);
+
+        void handleRenameNotAllowed();
     }
 }

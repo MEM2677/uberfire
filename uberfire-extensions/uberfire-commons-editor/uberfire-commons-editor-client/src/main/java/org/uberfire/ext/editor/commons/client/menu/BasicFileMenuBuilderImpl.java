@@ -27,10 +27,10 @@ import javax.inject.Inject;
 import org.jboss.errai.bus.client.api.messaging.Message;
 import org.jboss.errai.common.client.api.Caller;
 import org.jboss.errai.common.client.api.RemoteCallback;
+import org.kie.soup.commons.validation.PortablePreconditions;
 import org.uberfire.backend.vfs.Path;
 import org.uberfire.client.mvp.UpdatedLockStatusEvent;
 import org.uberfire.commons.data.Pair;
-import org.uberfire.commons.validation.PortablePreconditions;
 import org.uberfire.ext.editor.commons.client.file.CommandWithFileNameAndCommitMessage;
 import org.uberfire.ext.editor.commons.client.file.FileNameAndCommitMessage;
 import org.uberfire.ext.editor.commons.client.file.popups.CopyPopUpPresenter;
@@ -106,27 +106,47 @@ public class BasicFileMenuBuilderImpl implements BasicFileMenuBuilder {
     @Override
     public BasicFileMenuBuilder addDelete(final Path path,
                                           final Caller<? extends SupportsDelete> deleteCaller) {
+        return addDelete(path,
+                         deleteCaller,
+                         null);
+    }
+
+    @Override
+    public BasicFileMenuBuilder addDelete(final Path path,
+                                          final Caller<? extends SupportsDelete> deleteCaller,
+                                          final Validator validator) {
         return addDelete(() -> {
-            deletePopUpPresenter.show((String comment) -> {
-                busyIndicatorView.showBusyIndicator(CommonConstants.INSTANCE.Deleting());
-                deleteCaller.call(getDeleteSuccessCallback(),
-                                  new HasBusyIndicatorDefaultErrorCallback(busyIndicatorView)).delete(path,
-                                                                                                      comment);
-            });
+            deletePopUpPresenter.show(validator,
+                                      (String comment) -> {
+                                          busyIndicatorView.showBusyIndicator(CommonConstants.INSTANCE.Deleting());
+                                          deleteCaller.call(getDeleteSuccessCallback(),
+                                                            new HasBusyIndicatorDefaultErrorCallback(busyIndicatorView)).delete(path,
+                                                                                                                                comment);
+                                      });
         });
     }
 
     @Override
     public BasicFileMenuBuilder addDelete(final PathProvider provider,
                                           final Caller<? extends SupportsDelete> deleteCaller) {
+        return addDelete(provider,
+                         deleteCaller,
+                         null);
+    }
+
+    @Override
+    public BasicFileMenuBuilder addDelete(final PathProvider provider,
+                                          final Caller<? extends SupportsDelete> deleteCaller,
+                                          final Validator validator) {
         return addDelete(() -> {
             final Path path = provider.getPath();
-            deletePopUpPresenter.show((String comment) -> {
-                busyIndicatorView.showBusyIndicator(CommonConstants.INSTANCE.Deleting());
-                deleteCaller.call(getDeleteSuccessCallback(),
-                                  new HasBusyIndicatorDefaultErrorCallback(busyIndicatorView)).delete(path,
-                                                                                                      comment);
-            });
+            deletePopUpPresenter.show(validator,
+                                      (String comment) -> {
+                                          busyIndicatorView.showBusyIndicator(CommonConstants.INSTANCE.Deleting());
+                                          deleteCaller.call(getDeleteSuccessCallback(),
+                                                            new HasBusyIndicatorDefaultErrorCallback(busyIndicatorView)).delete(path,
+                                                                                                                                comment);
+                                      });
         });
     }
 

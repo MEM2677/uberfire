@@ -99,7 +99,6 @@ public class BookmarkableUrlHelper {
         } else {
             // this is a screen outside the current perspective
             if (!urlContainsExtraPerspectiveScreen(bookmarkableUrl)) {
-                GWT.log("~~~ " + bookmarkableUrl);
                 bookmarkableUrl = bookmarkableUrl.concat(OTHER_SCREEN_SEP).concat(screenName);
             } else {
                 bookmarkableUrl = bookmarkableUrl.concat(SEPARATOR).concat(screenName);
@@ -108,7 +107,6 @@ public class BookmarkableUrlHelper {
         if (isBiggerThenMaxURLSize(bookmarkableUrl)) {
             return currentBookmarkableUrl;
         }
-        GWT.log("@@@ " + bookmarkableUrl);
         return bookmarkableUrl;
     }
 

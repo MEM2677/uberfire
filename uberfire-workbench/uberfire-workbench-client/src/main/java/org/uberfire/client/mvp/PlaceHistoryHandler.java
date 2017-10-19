@@ -15,11 +15,6 @@
  */
 package org.uberfire.client.mvp;
 
-import java.util.logging.Logger;
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.event.Observes;
-import javax.inject.Inject;
-
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.user.client.History;
@@ -32,11 +27,19 @@ import org.uberfire.mvp.impl.DefaultPlaceRequest;
 import org.uberfire.mvp.impl.PathPlaceRequest;
 import org.uberfire.workbench.model.ActivityResourceType;
 
+import javax.annotation.PostConstruct;
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.Dependent;
+import javax.enterprise.event.Observes;
+import javax.inject.Inject;
+import java.util.logging.Logger;
+
 @ApplicationScoped
+//@SharedSingleton
 public class PlaceHistoryHandler {
 
     private static final Logger log = Logger.getLogger(PlaceHistoryHandler.class.getName());
-    private final Historian historian;
+    private Historian historian;
     @Inject
     private PlaceRequestHistoryMapper mapper;
     private PlaceManager placeManager;
@@ -46,7 +49,8 @@ public class PlaceHistoryHandler {
     /**
      * Create a new PlaceHistoryHandler.
      */
-    public PlaceHistoryHandler() {
+    @PostConstruct
+    public void initPlaceHistoryHandler() {
         this.historian = GWT.create(DefaultHistorian.class);
     }
 
@@ -88,12 +92,12 @@ public class PlaceHistoryHandler {
                     currentBookmarkableURLStatus.substring(0,
                                                            currentBookmarkableURLStatus.length() - 1);
         }
-        GWT.log("### " + currentBookmarkableURLStatus);
+        GWT.log("BEFORE update " + currentBookmarkableURLStatus);
 
         historian.newItem(currentBookmarkableURLStatus,
                           false);
 
-        GWT.log("??? " +historian.getToken());
+        GWT.log("AFTER update " +historian.getToken());
     }
 
     Logger log() {
@@ -177,7 +181,8 @@ public class PlaceHistoryHandler {
      */
     public void registerOpen(Activity activity,
                              PlaceRequest place) {
-        GWT.log("tracking " + place.getFullIdentifier() + " [" + activity.getResourceType().getName() + " , " + place.isUpdateLocationBarAllowed() +"]");
+        GWT.log("TRACK " + place.getFullIdentifier() + " [" + activity.getResourceType().getName() + " , " + place.isUpdateLocationBarAllowed() +"]");
+        GWT.log("(current: " + currentBookmarkableURLStatus + ")");
         if (place.isUpdateLocationBarAllowed()) {
             if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
                 currentBookmarkableURLStatus = BookmarkableUrlHelper.registerOpenedPerspective(currentBookmarkableURLStatus,

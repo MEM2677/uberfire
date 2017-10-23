@@ -134,8 +134,11 @@ public class ShowcaseEntryPoint {
         }).endMenu().newTopLevelMenu("Social").respondsWith(new Command() {
             @Override
             public void execute() {
-                placeManager.goTo(new ConditionalPlaceRequest("SocialPerspective"));
+                placeManager.goTo(new DefaultPlaceRequest("SocialPerspective"));
             }
+        }).endMenu().newTopLevelMenu("testPlayground").respondsWith(new Command() {
+            @Override
+            public void execute() { placeManager.goTo(new ConditionalPlaceRequest("TestPerspective")); }
         }).endMenu()
                 .newTopLevelMenu("Widgets").respondsWith(new Command() {
                     @Override

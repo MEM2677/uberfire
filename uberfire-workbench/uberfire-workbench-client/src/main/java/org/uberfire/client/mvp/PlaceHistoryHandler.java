@@ -92,12 +92,8 @@ public class PlaceHistoryHandler {
                     currentBookmarkableURLStatus.substring(0,
                                                            currentBookmarkableURLStatus.length() - 1);
         }
-        GWT.log("BEFORE update " + currentBookmarkableURLStatus);
-
         historian.newItem(currentBookmarkableURLStatus,
                           false);
-
-        GWT.log("AFTER update " +historian.getToken());
     }
 
     Logger log() {
@@ -181,8 +177,6 @@ public class PlaceHistoryHandler {
      */
     public void registerOpen(Activity activity,
                              PlaceRequest place) {
-        GWT.log("TRACK " + place.getFullIdentifier() + " [" + activity.getResourceType().getName() + " , " + place.isUpdateLocationBarAllowed() +"]");
-        GWT.log("(current: " + currentBookmarkableURLStatus + ")");
         if (place.isUpdateLocationBarAllowed()) {
             if (activity.isType(ActivityResourceType.PERSPECTIVE.name())) {
                 currentBookmarkableURLStatus = BookmarkableUrlHelper.registerOpenedPerspective(currentBookmarkableURLStatus,
